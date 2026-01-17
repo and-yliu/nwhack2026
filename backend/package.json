@@ -1,8 +1,19 @@
 {
+  "type": "module",
+  "scripts": {
+    "start:dev": "ts-node src/app.ts",
+    "build": "tsc"
+  },
   "dependencies": {
     "@openrouter/sdk": "^0.3.14",
     "cors": "^2.8.5",
     "express": "^5.2.1",
     "socket.io": "^4.8.3"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.0.9",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
   }
 }
