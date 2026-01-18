@@ -92,6 +92,26 @@ export class GameManager {
     }
 
     /**
+     * End a round exactly once (deadline, all-submitted, disconnect).
+     * This prevents duplicate judging/results/next-round emits caused by race conditions.
+     */
+    private tryEndRound(lobbyCode: string): boolean {
+        const game = this.games.get(lobbyCode);
+        if (!game) return false;
+        if (game.status !== 'round') return false;
+
+        // Lock the round immediately to prevent double-trigger
+        game.status = 'judging';
+        this.clearTimers(lobbyCode);
+
+        if (this.onRoundEnd) {
+            this.onRoundEnd(lobbyCode);
+        }
+
+        return true;
+    }
+
+    /**
      * Start the round timer
      */
     private startRoundTimer(lobbyCode: string) {
@@ -116,10 +136,7 @@ export class GameManager {
             }
 
             if (remaining <= 0) {
-                this.clearTimers(lobbyCode);
-                if (this.onRoundEnd) {
-                    this.onRoundEnd(lobbyCode);
-                }
+                this.tryEndRound(lobbyCode);
             }
         }, 1000);
 
@@ -167,10 +184,7 @@ export class GameManager {
 
         // Check if all players have submitted
         if (this.allPlayersSubmitted(lobbyCode)) {
-            this.clearTimers(lobbyCode);
-            if (this.onRoundEnd) {
-                this.onRoundEnd(lobbyCode);
-            }
+            this.tryEndRound(lobbyCode);
         }
 
         return true;
@@ -428,11 +442,8 @@ export class GameManager {
         }
 
         // Check if all remaining connected players have submitted
-        if (this.allPlayersSubmitted(lobbyCode) && game.status === 'round') {
-            this.clearTimers(lobbyCode);
-            if (this.onRoundEnd) {
-                this.onRoundEnd(lobbyCode);
-            }
+        if (this.allPlayersSubmitted(lobbyCode)) {
+            this.tryEndRound(lobbyCode);
         }
     }
 

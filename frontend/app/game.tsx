@@ -1,25 +1,51 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Image } from 'react-native';
+import { Alert, StyleSheet, Text, View, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { useSocket } from '@/hooks/useSocket';
 
 export default function GameScreen() {
+    const router = useRouter();
     const [permission, requestPermission] = useCameraPermissions();
     const cameraRef = useRef<CameraView>(null);
     const [photo, setPhoto] = useState<string | null>(null);
-    const submittedCount = 0; // TODO: wire game:player-submitted
+    const [isUploading, setIsUploading] = useState(false);
 
-    const { lobbyState, gameStart, currentRound, tick, submitPhoto } = useSocket();
+    const {
+        lobbyState,
+        gameStart,
+        currentRound,
+        tick,
+        submittedPlayerIds,
+        isJudging,
+        pendingNavigation,
+        clearPendingNavigation,
+        error,
+        uploadAndSubmitPhoto,
+    } = useSocket();
 
     useEffect(() => {
         if (permission && !permission.granted) {
             requestPermission();
         }
     }, [permission, requestPermission]);
+
+    useEffect(() => {
+        if (pendingNavigation?.type === 'round-result') {
+            clearPendingNavigation();
+            router.push('/round-result');
+        }
+    }, [pendingNavigation, clearPendingNavigation, router]);
+
+    useEffect(() => {
+        if (error) {
+            Alert.alert('Error', error);
+        }
+    }, [error]);
 
     const totalSeconds = lobbyState?.settings?.roundTimeSeconds ?? 60;
     const timeLeft = tick?.remainingSeconds ?? totalSeconds;
@@ -58,9 +84,14 @@ export default function GameScreen() {
     };
 
     const handleSubmit = () => {
-        if (!photo) return;
-        submitPhoto(photo);
+        if (!photo || isUploading) return;
+        setIsUploading(true);
+        uploadAndSubmitPhoto(photo)
+            .finally(() => setIsUploading(false));
     };
+
+    const totalPlayers = lobbyState?.players?.length ?? 0;
+    const submittedCount = submittedPlayerIds.length;
 
     return (
         <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -82,6 +113,7 @@ export default function GameScreen() {
                 <Text style={styles.criteriaText}>
                     Criteria: <Text style={styles.criteriaHighlight}>{criteriaText}</Text>
                 </Text>
+                {isJudging ? <Text style={styles.judgingText}>Judging...</Text> : null}
 
                 {/* Timer Bar */}
                 <View style={styles.timerContainer}>
@@ -101,12 +133,13 @@ export default function GameScreen() {
                 {photo ? (
                     <Image source={{ uri: photo }} style={styles.camera} resizeMode="cover" />
                 ) : (
-                    <CameraView
-                        style={styles.camera}
-                        facing="back"
-                        ref={cameraRef}
-                    >
-                        <View style={styles.cameraOverlay}>
+                    <>
+                        <CameraView
+                            style={StyleSheet.absoluteFill}
+                            facing="back"
+                            ref={cameraRef}
+                        />
+                        <View pointerEvents="box-none" style={styles.cameraOverlay}>
                             <TouchableOpacity
                                 style={styles.shutterButton}
                                 onPress={handleTakePhoto}
@@ -116,7 +149,7 @@ export default function GameScreen() {
                                 <Ionicons name="camera" size={24} color="#333" />
                             </TouchableOpacity>
                         </View>
-                    </CameraView>
+                    </>
                 )}
             </View>
 
@@ -124,7 +157,7 @@ export default function GameScreen() {
                 {photo ? (
                     <View style={styles.reviewControls}>
                         <NeoButton
-                            title="submit"
+                            title={isUploading ? 'uploading...' : 'submit'}
                             onPress={handleSubmit}
                             style={styles.submitButtonContainer}
                             variant="primary"
@@ -142,7 +175,7 @@ export default function GameScreen() {
                     </View>
                 ) : (
                     <View style={styles.statusContainer}>
-                        <Text style={styles.statusCount}>{submittedCount}/7</Text>
+                        <Text style={styles.statusCount}>{submittedCount}/{totalPlayers || 0}</Text>
                         <Text style={styles.statusLabel}>have submitted</Text>
                     </View>
                 )}
@@ -196,6 +229,12 @@ const styles = StyleSheet.create({
     criteriaHighlight: {
         fontFamily: 'Nunito_700Bold',
     },
+    judgingText: {
+        fontSize: 16,
+        fontFamily: 'Nunito_700Bold',
+        color: Colors.neo.text,
+        marginBottom: 16,
+    },
     timerContainer: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -236,8 +275,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     cameraOverlay: {
-        paddingBottom: 30,
-        width: '100%',
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        bottom: 30,
         alignItems: 'center',
     },
     shutterButton: {

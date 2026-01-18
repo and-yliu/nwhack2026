@@ -62,6 +62,24 @@ export class GameManager {
         return game.story.blanks[game.currentRound - 1];
     }
     /**
+     * End a round exactly once (deadline, all-submitted, disconnect).
+     * This prevents duplicate judging/results/next-round emits caused by race conditions.
+     */
+    tryEndRound(lobbyCode) {
+        const game = this.games.get(lobbyCode);
+        if (!game)
+            return false;
+        if (game.status !== 'round')
+            return false;
+        // Lock the round immediately to prevent double-trigger
+        game.status = 'judging';
+        this.clearTimers(lobbyCode);
+        if (this.onRoundEnd) {
+            this.onRoundEnd(lobbyCode);
+        }
+        return true;
+    }
+    /**
      * Start the round timer
      */
     startRoundTimer(lobbyCode) {
@@ -82,10 +100,7 @@ export class GameManager {
                 this.onTick(lobbyCode, remaining);
             }
             if (remaining <= 0) {
-                this.clearTimers(lobbyCode);
-                if (this.onRoundEnd) {
-                    this.onRoundEnd(lobbyCode);
-                }
+                this.tryEndRound(lobbyCode);
             }
         }, 1000);
         this.tickIntervals.set(lobbyCode, tickInterval);
@@ -125,10 +140,7 @@ export class GameManager {
         player.photoPath = photoPath;
         // Check if all players have submitted
         if (this.allPlayersSubmitted(lobbyCode)) {
-            this.clearTimers(lobbyCode);
-            if (this.onRoundEnd) {
-                this.onRoundEnd(lobbyCode);
-            }
+            this.tryEndRound(lobbyCode);
         }
         return true;
     }
@@ -353,12 +365,25 @@ export class GameManager {
             player.hasSubmitted = true;
         }
         // Check if all remaining connected players have submitted
-        if (this.allPlayersSubmitted(lobbyCode) && game.status === 'round') {
-            this.clearTimers(lobbyCode);
-            if (this.onRoundEnd) {
-                this.onRoundEnd(lobbyCode);
-            }
+        if (this.allPlayersSubmitted(lobbyCode)) {
+            this.tryEndRound(lobbyCode);
         }
+    }
+    /**
+     * Handle player rejoin - update socket ID in game state
+     */
+    handleRejoin(lobbyCode, oldSocketId, newSocketId) {
+        const game = this.games.get(lobbyCode);
+        if (!game)
+            return false;
+        const player = game.players.get(oldSocketId);
+        if (!player)
+            return false;
+        // Update player ID in game state
+        game.players.delete(oldSocketId);
+        player.id = newSocketId;
+        game.players.set(newSocketId, player);
+        return true;
     }
 }
 // Export singleton instance

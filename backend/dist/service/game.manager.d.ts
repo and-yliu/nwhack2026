@@ -25,6 +25,11 @@ export declare class GameManager {
      */
     getCurrentBlank(game: GameState): import("../lib/types/types.js").StoryBlank | undefined;
     /**
+     * End a round exactly once (deadline, all-submitted, disconnect).
+     * This prevents duplicate judging/results/next-round emits caused by race conditions.
+     */
+    private tryEndRound;
+    /**
      * Start the round timer
      */
     private startRoundTimer;
@@ -81,6 +86,10 @@ export declare class GameManager {
      * Handle player disconnect
      */
     handleDisconnect(lobbyCode: string, playerId: string): void;
+    /**
+     * Handle player rejoin - update socket ID in game state
+     */
+    handleRejoin(lobbyCode: string, oldSocketId: string, newSocketId: string): boolean;
 }
 export declare const gameManager: GameManager;
 //# sourceMappingURL=game.manager.d.ts.map
