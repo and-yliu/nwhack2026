@@ -60,6 +60,12 @@ export default function HomeScreen() {
                   variant="outline"
                   style={styles.button}
                 />
+                <NeoButton
+                  title="🏆 Test Round Result"
+                  onPress={() => router.push('/round-result')}
+                  variant="secondary"
+                  style={styles.button}
+                />
               </View>
             </View>
           </KeyboardAvoidingView>
