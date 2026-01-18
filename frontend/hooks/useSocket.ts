@@ -91,6 +91,7 @@ interface SocketState {
     roundResult: RoundResultPayload | null;
     roundResultContext: RoundPayload | null;
     pendingNavigation: PendingNavigation;
+    remoteReactions: Array<{ id: string; icon: string; playerId: string }>;
 }
 
 let globalState: SocketState = {
@@ -105,6 +106,7 @@ let globalState: SocketState = {
     roundResult: null,
     roundResultContext: null,
     pendingNavigation: null,
+    remoteReactions: [],
 };
 
 const listeners = new Set<() => void>();
@@ -250,6 +252,18 @@ function getSocket(): Socket {
                     roundResult: null,
                     roundResultContext: null,
                     pendingNavigation: { type: 'game' }
+                });
+            });
+
+            socketInstance.on('game:reaction', ({ icon, playerId }: { icon: string; playerId: string }) => {
+                console.log('Remote reaction received:', icon, 'from', playerId);
+                const newReaction = {
+                    id: `${Date.now()}-${Math.random()}`,
+                    icon,
+                    playerId,
+                };
+                setGlobalState({
+                    remoteReactions: [...globalState.remoteReactions, newReaction]
                 });
             });
 
@@ -414,6 +428,18 @@ export function useSocket() {
         setGlobalState({ pendingNavigation: null });
     }, []);
 
+    // Send a reaction to other players in the room
+    const sendReaction = useCallback((icon: string) => {
+        socket.emit('game:reaction', { icon });
+    }, []);
+
+    // Remove a reaction from the queue after animation completes
+    const consumeReaction = useCallback((reactionId: string) => {
+        setGlobalState({
+            remoteReactions: globalState.remoteReactions.filter(r => r.id !== reactionId)
+        });
+    }, []);
+
     return {
         socket,
         isConnected: state.isConnected,
@@ -427,6 +453,7 @@ export function useSocket() {
         roundResult: state.roundResult,
         roundResultContext: state.roundResultContext,
         pendingNavigation: state.pendingNavigation,
+        remoteReactions: state.remoteReactions,
         createLobby,
         joinLobby,
         leaveLobby,
@@ -436,5 +463,7 @@ export function useSocket() {
         submitPhoto,
         uploadAndSubmitPhoto,
         clearPendingNavigation,
+        sendReaction,
+        consumeReaction,
     };
 }
