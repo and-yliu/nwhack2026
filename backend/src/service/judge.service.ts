@@ -8,6 +8,10 @@
  */
 
 import { OpenRouter } from "@openrouter/sdk";
+import * as fs from "fs";
+import { SCOUT_SYSTEM_PROMPT, SCOUT_SCHEMA } from "../lib/prompts/scout.prompt";
+import { COUNCIL_SYSTEM_PROMPT, COUNCIL_SCHEMA } from "../lib/prompts/council.prompt";
+import { BARD_SYSTEM_PROMPT, BARD_SCHEMA } from "../lib/prompts/bard.prompt";
 
 // ============================================================================
 // Types & Interfaces
@@ -64,169 +68,38 @@ export interface RoundResult {
 }
 
 // ============================================================================
-// JSON Schemas for Structured Output
+// Helper Functions
 // ============================================================================
 
-const SCOUT_SCHEMA = {
-    type: "object",
-    properties: {
-        description: {
-            type: "string",
-            description: "A literal description of visual elements in the image",
-        },
-        reasoning: {
-            type: "string",
-            description: "Why this image fits or doesn't fit the riddle",
-        },
-        scores: {
-            type: "object",
-            properties: {
-                match: {
-                    type: "integer",
-                    description: "Riddle match score 0-10",
-                    minimum: 0,
-                    maximum: 10,
-                },
-                creativity: {
-                    type: "integer",
-                    description: "Creativity score 0-10 (literal=low, lateral/weird=high)",
-                    minimum: 0,
-                    maximum: 10,
-                },
-                aesthetic: {
-                    type: "integer",
-                    description: "Aesthetic score 0-10 (framing, composition, drama)",
-                    minimum: 0,
-                    maximum: 10,
-                },
-            },
-            required: ["match", "creativity", "aesthetic"],
-            additionalProperties: false,
-        },
-        flags: {
-            type: "object",
-            properties: {
-                is_suspicious: {
-                    type: "boolean",
-                    description: "True if image appears to be a screenshot, stock photo, or fake",
-                },
-                is_uncertain: {
-                    type: "boolean",
-                    description: "True if analysis confidence is low",
-                },
-            },
-            required: ["is_suspicious", "is_uncertain"],
-            additionalProperties: false,
-        },
-        vibe_tag: {
-            type: "string",
-            description: "A short 2-word tag describing the photo vibe",
-        },
-    },
-    required: ["description", "reasoning", "scores", "flags", "vibe_tag"],
-    additionalProperties: false,
-};
+/**
+ * Encode an image file to base64 data URI
+ */
+async function encodeImageToBase64(imagePath: string): Promise<string> {
+    const imageBuffer = await fs.promises.readFile(imagePath);
+    const base64Image = imageBuffer.toString("base64");
+    return `data:image/jpeg;base64,${base64Image}`;
+}
 
-const COUNCIL_SCHEMA = {
-    type: "object",
-    properties: {
-        grand_winner_id: {
-            type: "string",
-            description: "Player ID of the grand winner",
-        },
-        grand_winner_rationale: {
-            type: "string",
-            description: "Why they won (internal logic)",
-        },
-        troll_winner_id: {
-            type: "string",
-            description: "Player ID of the chaos/troll winner",
-        },
-        troll_winner_rationale: {
-            type: "string",
-            description: "Why they are the chaos lord",
-        },
-        scoreboard: {
-            type: "array",
-            items: {
-                type: "object",
-                properties: {
-                    rank: { type: "integer" },
-                    player_id: { type: "string" },
-                    score: { type: "integer" },
-                },
-                required: ["rank", "player_id", "score"],
-                additionalProperties: false,
-            },
-        },
-    },
-    required: [
-        "grand_winner_id",
-        "grand_winner_rationale",
-        "troll_winner_id",
-        "troll_winner_rationale",
-        "scoreboard",
-    ],
-    additionalProperties: false,
-};
-
-const BARD_SCHEMA = {
-    type: "object",
-    properties: {
-        one_liner: {
-            type: "string",
-            description: "A punchy one-liner announcement, max 15 words",
-        },
-    },
-    required: ["one_liner"],
-    additionalProperties: false,
-};
-
-// ============================================================================
-// Agent System Prompts
-// ============================================================================
-
-const SCOUT_SYSTEM_PROMPT = `You are **The Scout**, a vision-analysis AI for the game [IRL Quests]. Your job is to analyze a photo submission for a scavenger hunt riddle.
-
-**YOUR OBJECTIVES:**
-1. **Identify:** What is strictly in the image?
-2. **Verify:** Is this a screen, a stock photo, or a fake? (Anti-Cheat).
-3. **Score:** Rate on 0-10 scales based on the Rubric below.
-
-**THE RUBRIC:**
-- **Riddle Match (0-10):** Does this object solve the riddle? (Be generous with fuzzy logic).
-- **Creativity (0-10):** Is this a literal interpretation (low score) or a lateral/weird/funny interpretation (high score)?
-- **Aesthetic (0-10):** Is the framing funny, dramatic, or artistic?
-
-**ANTI-CHEAT PROTOCOL:** If the image looks like a screenshot, a Google Images result, or has obvious UI overlays, flag is_suspicious as TRUE. If the image is blurry but clearly an attempt, do not punish—mark it valid.`;
-
-const COUNCIL_SYSTEM_PROMPT = `You are the **High Council Judge** of [IRL Quests]. You decide the fate of the players.
-
-**YOUR TASK:** Analyze the entries and select winners. You value cleverness and humor just as much as correctness.
-
-**SELECTION CRITERIA:**
-1. **The Grand Winner:** The highest total score (Match + Creativity + Aesthetic). However, if a submission is "Suspicious," they are disqualified immediately.
-2. **The Troll/Creative Winner:** The entry with the highest "Creativity" score that *technically* fits the riddle but in a weird way. (If the Grand Winner is also the most creative, pick the runner-up for this category).
-
-**TIE-BREAKER LOGIC:**
-1. Highest Creativity.
-2. Funniest Vibe Tag.
-3. Coin flip.`;
-
-const BARD_SYSTEM_PROMPT = `You are the **Voice of the Game** for [IRL Quests]. Your job is to announce the winner with a "One-Liner" that appears on the scoreboard.
-
-**STYLE GUIDE:**
-- **Brevity:** Maximum 15 words.
-- **Tone:** Punchy, celebratory, slightly sarcastic, or genuinely impressed.
-- **Format:** Do not use hashtags.
-
-**EXAMPLES:**
-- *Context: Player took a photo of a cloud for a 'cotton candy' riddle.*
-  Output: "Forbidden cotton candy tastes the best. +50 points."
-- *Context: Player found the exact obscure object requested.*
-  Output: "Did you have this in your pocket? Suspiciously perfect."
-- *Context: Player took a photo of their cat for a 'monster' riddle.*
-  Output: "The cutest apex predator we've ever seen."`;
+/**
+ * Extract string content from OpenRouter response
+ * Handles both string and array content types
+ */
+function extractContentString(
+    content: string | Array<any> | null | undefined
+): string {
+    if (!content) {
+        throw new Error("Response content is empty");
+    }
+    if (typeof content === "string") {
+        return content;
+    }
+    // If it's an array, find the first text item
+    const textItem = content.find((item) => item.type === "text");
+    if (textItem?.text) {
+        return textItem.text;
+    }
+    throw new Error("Unable to extract text content from response");
+}
 
 // ============================================================================
 // Judge Service Class
@@ -238,18 +111,25 @@ export class JudgeService {
     // Model assignments per agent
     private readonly SCOUT_MODEL = "google/gemini-3-flash-preview";
     private readonly COUNCIL_MODEL = "anthropic/claude-sonnet-4.5";
-    private readonly BARD_MODEL = "google/gemini-3-pro-preview";
+    private readonly BARD_MODEL = "google/gemini-3-flash-preview";
 
     constructor(apiKey?: string) {
+        const key = apiKey || process.env.OPENROUTER_API_KEY;
+        if (!key) {
+            throw new Error("OpenRouter API key is required. Set OPENROUTER_API_KEY environment variable or pass apiKey to constructor.");
+        }
         this.client = new OpenRouter({
-            apiKey: apiKey || process.env.OPENROUTER_API_KEY,
+            apiKey: key,
         });
     }
 
     /**
      * Scout Agent: Analyze a single image submission
      */
-    async scoutAnalyze(riddle: string, imageBase64: string): Promise<ScoutAnalysis> {
+    async scoutAnalyze(riddle: string, imagePath: string): Promise<ScoutAnalysis> {
+        // Read and encode the image
+        const base64Image = await encodeImageToBase64(imagePath);
+
         const response = await this.client.chat.send({
             model: this.SCOUT_MODEL,
             messages: [
@@ -260,7 +140,7 @@ export class JudgeService {
                         { type: "text", text: `**RIDDLE:** "${riddle}"\n\nAnalyze the following photo submission:` },
                         {
                             type: "image_url",
-                            imageUrl: { url: `data:image/jpeg;base64,${imageBase64}` },
+                            imageUrl: { url: base64Image },
                         },
                     ],
                 },
@@ -276,11 +156,7 @@ export class JudgeService {
             stream: false,
         });
 
-        const content = response.choices?.[0]?.message?.content;
-        if (!content) {
-            throw new Error("Scout agent returned empty response");
-        }
-
+        const content = extractContentString(response.choices?.[0]?.message?.content);
         return JSON.parse(content) as ScoutAnalysis;
     }
 
@@ -319,11 +195,7 @@ export class JudgeService {
             stream: false,
         });
 
-        const content = response.choices?.[0]?.message?.content;
-        if (!content) {
-            throw new Error("Council agent returned empty response");
-        }
-
+        const content = extractContentString(response.choices?.[0]?.message?.content);
         return JSON.parse(content) as CouncilJudgment;
     }
 
@@ -333,15 +205,28 @@ export class JudgeService {
     async bardAnnounce(
         riddle: string,
         winnerId: string,
-        winnerContext: string
+        winnerContext: string,
+        imagePath: string
     ): Promise<string> {
+        // Read and encode the image
+        const base64Image = await encodeImageToBase64(imagePath);
+
         const response = await this.client.chat.send({
             model: this.BARD_MODEL,
             messages: [
                 { role: "system", content: BARD_SYSTEM_PROMPT },
                 {
                     role: "user",
-                    content: `**RIDDLE:** "${riddle}"\n**WINNER:** Player ${winnerId}\n**CONTEXT:** ${winnerContext}\n\nGenerate the one-liner for this winner.`,
+                    content: [
+                        {
+                            type: "text",
+                            text: `**RIDDLE:** "${riddle}"\n**WINNER:** Player ${winnerId}\n**CONTEXT:** ${winnerContext}\n\nGenerate the one-liner for this winner.`,
+                        },
+                        {
+                            type: "image_url",
+                            imageUrl: { url: base64Image },
+                        },
+                    ],
                 },
             ],
             responseFormat: {
@@ -355,11 +240,7 @@ export class JudgeService {
             stream: false,
         });
 
-        const content = response.choices?.[0]?.message?.content;
-        if (!content) {
-            throw new Error("Bard agent returned empty response");
-        }
-
+        const content = extractContentString(response.choices?.[0]?.message?.content);
         const result = JSON.parse(content) as BardAnnouncement;
         return result.one_liner;
     }
@@ -383,9 +264,31 @@ export class JudgeService {
         const judgment = await this.councilJudge(riddle, analyzedSubmissions);
 
         // Step 3: Bard generates announcements for winners (in parallel)
+        // Find the winner submissions to get their image paths
+        const grandWinnerSubmission = analyzedSubmissions.find(
+            (s) => s.player_id === judgment.grand_winner_id
+        );
+        const trollWinnerSubmission = analyzedSubmissions.find(
+            (s) => s.player_id === judgment.troll_winner_id
+        );
+
+        if (!grandWinnerSubmission || !trollWinnerSubmission) {
+            throw new Error("Winner submission not found");
+        }
+
         const [grandAnnouncement, trollAnnouncement] = await Promise.all([
-            this.bardAnnounce(riddle, judgment.grand_winner_id, judgment.grand_winner_rationale),
-            this.bardAnnounce(riddle, judgment.troll_winner_id, judgment.troll_winner_rationale),
+            this.bardAnnounce(
+                riddle,
+                judgment.grand_winner_id,
+                judgment.grand_winner_rationale,
+                grandWinnerSubmission.image_base64 // This will need to be changed to image_path when you update PlayerSubmission interface
+            ),
+            this.bardAnnounce(
+                riddle,
+                judgment.troll_winner_id,
+                judgment.troll_winner_rationale,
+                trollWinnerSubmission.image_base64 // This will need to be changed to image_path when you update PlayerSubmission interface
+            ),
         ]);
 
         return {
