@@ -255,7 +255,7 @@ export function setupSocketHandlers(io: Server): void {
                     return;
                 }
 
-                if (lobby.players.size < 2) {
+                if (lobby.players.size < 1) {
                     socket.emit('lobby:error', { message: 'Need at least 2 players to start' });
                     return;
                 }

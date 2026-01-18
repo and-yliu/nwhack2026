@@ -135,7 +135,7 @@ export default function StoryResultScreen() {
             <View className="w-full">
               <NeoButton
                 title="Next"
-                onPress={() => router.push('/prizes')}
+                onPress={() => router.replace('/prizes')}
                 variant="primary"
               />
             </View>

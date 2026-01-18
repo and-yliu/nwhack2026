@@ -53,7 +53,7 @@ export default function PlayerWaitingRoomScreen() {
 
     const handleLeaveRoom = () => {
         leaveLobby();
-        router.back();
+        router.replace('/');
     };
 
     // Navigate to loading/game when it starts
