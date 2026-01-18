@@ -15,7 +15,6 @@ export default function HostWaitingRoomScreen() {
         roomPin?: string;
     }>();
     const router = useRouter();
-    const router = useRouter();
 
     const nickname = params.nickname;
     const { lobbyState, error, updateSettings, startGame, gameStart } = useSocket();

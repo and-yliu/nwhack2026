@@ -13,7 +13,7 @@ export default function PlayerWaitingRoomScreen() {
         nickname: string;
         roomPin: string;
     }>();
-    const router = useRouter();
+
     const router = useRouter();
 
     const nickname = params.nickname;
