@@ -366,7 +366,7 @@ async function handleRoundEnd(io: Server, lobbyCode: string): Promise<void> {
     }
 
     // Wait for players to see results, then advance
-    setTimeout(() => {
+    setTimeout(async () => {
         const currentGame = gameManager.getGame(lobbyCode);
         if (!currentGame) return;
 
@@ -375,11 +375,13 @@ async function handleRoundEnd(io: Server, lobbyCode: string): Promise<void> {
         if (!nextGame) return;
 
         if (nextGame.status === 'complete') {
-            // Game over - send complete story and awards
-            const completePayload = gameManager.getGameCompletePayload(nextGame);
-            io.to(lobbyCode).emit('game:complete', completePayload);
-
+            // Game over - get awards first to find the "Most Clueless" player
             const awardsPayload = gameManager.getFinalAwardsPayload(nextGame);
+            const trollName = awardsPayload.mostClueless[0]?.name ?? 'The Adventurer';
+
+            // Generate recap with troll name and send complete story
+            const completePayload = await gameManager.getGameCompletePayload(nextGame, trollName);
+            io.to(lobbyCode).emit('game:complete', completePayload);
             io.to(lobbyCode).emit('game:awards', awardsPayload);
 
             gameManager.endGame(lobbyCode);

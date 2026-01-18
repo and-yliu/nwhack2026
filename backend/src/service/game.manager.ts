@@ -347,13 +347,40 @@ export class GameManager {
     }
 
     /**
-     * Get game complete payload
+     * Get game complete payload with AI-generated recap
+     * @param trollName - Name of the "Most Clueless" player to feature in the story
      */
-    getGameCompletePayload(game: GameState): GameCompletePayload {
-        return {
-            storyTemplate: game.story.storyTemplate,
-            results: game.results,
-        };
+    async getGameCompletePayload(game: GameState, trollName: string): Promise<GameCompletePayload> {
+        // Build BlankResult array from round results
+        const blankResults: BlankResult[] = game.results.map(r => ({
+            index: r.blankIndex,
+            bestWord: r.objectName,
+        }));
+
+        try {
+            // Call recap service for AI-generated story
+            const recap = await generateRecap({
+                story: game.story.storyTemplate,
+                trollName,
+                results: blankResults,
+            });
+
+            return {
+                storyTemplate: game.story.storyTemplate,
+                results: game.results,
+                segments: recap.segments,
+                finalStory: recap.finalStory,
+            };
+        } catch (err) {
+            console.error('Recap generation failed:', err);
+            // Fallback: return without AI recap
+            return {
+                storyTemplate: game.story.storyTemplate,
+                results: game.results,
+                segments: [],
+                finalStory: game.story.storyTemplate, // Use template as fallback
+            };
+        }
     }
 
     /**

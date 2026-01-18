@@ -165,10 +165,19 @@ export interface RoundResultPayload {
     oneliner: string;
 }
 
-// Game complete payload
+// Story segment from recap service
+export interface StorySegment {
+    index: number;
+    lead: string;
+}
+
+// Game complete payload with AI recap
 export interface GameCompletePayload {
     storyTemplate: string;
     results: RoundResultData[];
+    // From recap service
+    segments: StorySegment[];
+    finalStory: string;
 }
 
 // Final awards payload
