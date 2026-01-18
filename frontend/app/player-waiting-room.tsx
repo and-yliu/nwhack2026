@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -12,6 +12,7 @@ export default function PlayerWaitingRoomScreen() {
         nickname: string;
         roomPin: string;
     }>();
+    const router = useRouter();
 
     const nickname = params.nickname;
     const roomPin = params.roomPin;
@@ -26,7 +27,7 @@ export default function PlayerWaitingRoomScreen() {
         { id: '1', name: 'Host', isReady: true },
         { id: '2', name: nickname || 'Player', isReady: isReady }, // Current player's ready state
         { id: '3', name: 'Alice', isReady: true },
-        { id: '4', name: 'Bob', isReady: false }, // Pending
+        { id: '4', name: 'Bob', isReady: true }, // Ready
     ];
 
     const handleReady = () => {

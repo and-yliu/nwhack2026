@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -13,6 +13,7 @@ export default function HostWaitingRoomScreen() {
         nickname: string;
         roomPin?: string;
     }>();
+    const router = useRouter();
 
     const nickname = params.nickname;
     const roomPin = params.roomPin || '4921'; // Use provided PIN or generate one
@@ -24,8 +25,18 @@ export default function HostWaitingRoomScreen() {
     const players = [
         { id: '1', name: nickname || 'Host', isReady: true },
         { id: '2', name: 'Alice', isReady: true },
-        { id: '3', name: 'Bob', isReady: false }, // Pending
+        { id: '3', name: 'Bob', isReady: true }, // Ready
     ];
+
+    // Check if all players are ready
+    const allReady = players.every(player => player.isReady);
+
+    const handleStartGame = () => {
+        // Only navigate if all players are ready
+        if (allReady) {
+            router.push('/game');
+        }
+    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -78,7 +89,12 @@ export default function HostWaitingRoomScreen() {
 
             {/* Footer / Start Button */}
             <View style={styles.footer}>
-                <NeoButton title="START GAME" onPress={() => { }} variant="primary" />
+                <NeoButton
+                    title="START GAME"
+                    onPress={handleStartGame}
+                    variant="primary"
+                    disabled={!allReady}
+                />
             </View>
         </SafeAreaView>
     );

@@ -8,10 +8,12 @@ interface NeoButtonProps {
   style?: ViewStyle;
   backgroundColor?: string;
   textColor?: string;
+  disabled?: boolean;
 }
 
-export function NeoButton({ title, onPress, variant = 'primary', style, backgroundColor, textColor }: NeoButtonProps) {
+export function NeoButton({ title, onPress, variant = 'primary', style, backgroundColor, textColor, disabled }: NeoButtonProps) {
   const getBackgroundColor = () => {
+    if (disabled) return '#E0E0E0'; // Fallback if disabled color not defined
     if (backgroundColor) return backgroundColor;
     switch (variant) {
       case 'primary':
@@ -26,6 +28,7 @@ export function NeoButton({ title, onPress, variant = 'primary', style, backgrou
   };
 
   const getTextColor = () => {
+    if (disabled) return '#666666';
     if (textColor) return textColor;
     return Colors.neo.text;
   };
@@ -34,10 +37,11 @@ export function NeoButton({ title, onPress, variant = 'primary', style, backgrou
     <TouchableOpacity
       activeOpacity={0.8}
       onPress={onPress}
-      style={[styles.container, style]}
+      disabled={disabled}
+      style={[styles.container, style, disabled && { opacity: 0.7 }]}
     >
-      <View style={styles.shadow} />
-      <View style={[styles.content, { backgroundColor: getBackgroundColor() }]}>
+      <View style={[styles.shadow, disabled && { display: 'none' }]} />
+      <View style={[styles.content, { backgroundColor: getBackgroundColor(), transform: disabled ? [{ translateY: 4 }, { translateX: 4 }] : [] }]}>
         <Text style={[styles.text, { color: getTextColor() }]}>{title}</Text>
       </View>
     </TouchableOpacity>
