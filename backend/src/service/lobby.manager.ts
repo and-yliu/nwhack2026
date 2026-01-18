@@ -40,6 +40,7 @@ export class LobbyManager {
             name: hostName,
             isHost: true,
             isReady: false,
+            isConnected: true,
         };
 
         const lobby: Lobby = {
@@ -85,6 +86,7 @@ export class LobbyManager {
             name: playerName,
             isHost: false,
             isReady: false,
+            isConnected: true,
         };
 
         lobby.players.set(socketId, player);
@@ -129,6 +131,62 @@ export class LobbyManager {
         }
 
         return { lobby, wasHost, code };
+    }
+
+    /**
+     * Mark a player as disconnected (don't remove during game)
+     * Allows rejoin by name within the same lobby
+     */
+    markDisconnected(socketId: string): { lobby: Lobby | null; code: string; playerName: string } | null {
+        const code = this.playerToLobby.get(socketId);
+        if (!code) return null;
+
+        const lobby = this.lobbies.get(code);
+        if (!lobby) {
+            this.playerToLobby.delete(socketId);
+            return null;
+        }
+
+        const player = lobby.players.get(socketId);
+        if (!player) return null;
+
+        const playerName = player.name;
+
+        // If game is in progress, just mark as disconnected
+        if (lobby.status === 'in-game') {
+            player.isConnected = false;
+            this.playerToLobby.delete(socketId);
+            return { lobby, code, playerName };
+        }
+
+        // If waiting, fully remove (use leaveLobby)
+        this.leaveLobby(socketId);
+        return { lobby, code, playerName };
+    }
+
+    /**
+     * Rejoin a lobby by name (for reconnecting players)
+     * Returns the player's previous state if found
+     */
+    rejoinLobby(code: string, newSocketId: string, playerName: string): { lobby: Lobby; oldSocketId: string } | null {
+        const lobby = this.lobbies.get(code.toUpperCase());
+        if (!lobby) return null;
+
+        // Find disconnected player with matching name
+        for (const [oldSocketId, player] of lobby.players) {
+            if (player.name === playerName && !player.isConnected) {
+                // Update socket ID
+                lobby.players.delete(oldSocketId);
+                player.id = newSocketId;
+                player.isConnected = true;
+                lobby.players.set(newSocketId, player);
+                this.playerToLobby.set(newSocketId, code);
+
+                return { lobby, oldSocketId };
+            }
+        }
+
+        return null; // No matching disconnected player
     }
 
     /**
@@ -237,6 +295,7 @@ export class LobbyManager {
             name: p.name,
             isHost: p.isHost,
             isReady: p.isReady,
+            isConnected: p.isConnected,
         }));
 
         return {

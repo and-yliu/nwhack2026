@@ -271,7 +271,7 @@
       </div>
       <div class="row">
         <button onclick="createLobby()">Create</button>
-        <button onclick="joinLobby()">Join</button>
+        <button onclick="joinLobby()">Join / Rejoin</button>
         <button onclick="leaveLobby()" class="secondary">Leave</button>
       </div>
       <div class="row" style="margin-top: 0.5rem;">
@@ -315,6 +315,8 @@
         </div>
         <div class="state-item"><span class="state-label">Theme</span><span class="state-value" id="stTheme">-</span>
         </div>
+        <div class="state-item"><span class="state-label">Criteria</span><span class="state-value"
+            id="stCriteria">-</span></div>
       </div>
     </div>
 
@@ -330,7 +332,7 @@
   </div>
 
   <script>
-    const socket = io('http://localhost:3000');
+    const socket = io('http://10.19.130.64:3000');
     let isReady = false;
     let lastUploadPath = null;
 
@@ -370,6 +372,7 @@
       logEvent('game:round', data, 'game');
       document.getElementById('stRound').textContent = data.round + '/' + data.totalRounds;
       document.getElementById('stTheme').textContent = data.theme;
+      document.getElementById('stCriteria').textContent = data.criteria;
       document.getElementById('stTimer').textContent = data.remainingSeconds + 's';
     });
     socket.on('game:tick', (data) => {
@@ -390,6 +393,10 @@
     });
     socket.on('game:awards', (data) => logEvent('game:awards', data, 'game'));
     socket.on('game:error', (data) => logEvent('game:error', data, 'error'));
+
+    // Rejoin events
+    socket.on('lobby:player-disconnected', (data) => logEvent('lobby:player-disconnected', data, 'error'));
+    socket.on('lobby:player-rejoined', (data) => logEvent('lobby:player-rejoined', data, 'receive'));
 
     // === Actions ===
     function createLobby() {
@@ -446,11 +453,11 @@
       statusEl.innerHTML = 'Uploading...';
 
       try {
-        const res = await fetch('http://localhost:3000/upload', { method: 'POST', body: formData });
+        const res = await fetch('http://10.19.130.64:3000/upload', { method: 'POST', body: formData });
         const data = await res.json();
         if (res.ok) {
           statusEl.innerHTML = '<span class="success">✅ Uploaded!</span>';
-          previewEl.innerHTML = '<img src="http://localhost:3000/' + data.path + '">';
+          previewEl.innerHTML = '<img src="http://10.19.130.64:3000/' + data.path + '">';
           lastUploadPath = data.path;
           logEvent('upload:success', data, 'receive');
           // Auto-submit to game

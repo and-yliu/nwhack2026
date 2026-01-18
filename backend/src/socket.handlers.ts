@@ -98,12 +98,14 @@ export function setupSocketHandlers(io: Server): void {
         });
 
         /**
-         * lobby:join - Join an existing lobby
+         * lobby:join - Join an existing lobby (or rejoin if disconnected)
          * @param {string} code - 4-character lobby code
          * @param {string} name - Player's display name
          * @emits lobby:state - Full lobby state to all players in lobby
-         * @emits lobby:player-joined - Notification to other players
-         * @emits lobby:error - If lobby not found, full, or game in progress
+         * @emits lobby:player-joined - Notification to other players (new join)
+         * @emits lobby:player-rejoined - Notification to other players (rejoin)
+         * @emits game:round - Current round info if rejoining game in progress
+         * @emits lobby:error - If lobby not found, full, or game in progress (for new players)
          */
         socket.on('lobby:join', (payload: JoinLobbyPayload) => {
             try {
@@ -119,7 +121,43 @@ export function setupSocketHandlers(io: Server): void {
                     return;
                 }
 
-                const lobby = lobbyManager.joinLobby(code.trim().toUpperCase(), socket.id, name.trim());
+                const trimmedCode = code.trim().toUpperCase();
+                const trimmedName = name.trim();
+
+                // First, try to rejoin as a disconnected player
+                const rejoinResult = lobbyManager.rejoinLobby(trimmedCode, socket.id, trimmedName);
+
+                if (rejoinResult) {
+                    // Rejoining as disconnected player
+                    const { lobby, oldSocketId } = rejoinResult;
+                    socket.join(lobby.code);
+
+                    // Update game state if game in progress
+                    const game = gameManager.getGame(lobby.code);
+                    if (game) {
+                        gameManager.handleRejoin(lobby.code, oldSocketId, socket.id);
+
+                        // Send current game state
+                        const roundPayload = gameManager.getRoundPayload(game);
+                        socket.emit('game:round', roundPayload);
+                    }
+
+                    // Send lobby state
+                    const state = lobbyManager.toLobbyState(lobby);
+                    socket.emit('lobby:state', state);
+
+                    // Notify others about rejoin
+                    socket.to(lobby.code).emit('lobby:player-rejoined', {
+                        playerId: socket.id,
+                        playerName: trimmedName,
+                    });
+
+                    console.log(`${trimmedName} rejoined lobby ${lobby.code}`);
+                    return;
+                }
+
+                // Not a rejoin - try normal join
+                const lobby = lobbyManager.joinLobby(trimmedCode, socket.id, trimmedName);
                 socket.join(lobby.code);
 
                 const state = lobbyManager.toLobbyState(lobby);
@@ -129,10 +167,10 @@ export function setupSocketHandlers(io: Server): void {
 
                 // Notify others about new player
                 socket.to(lobby.code).emit('lobby:player-joined', {
-                    player: { id: socket.id, name: name.trim() },
+                    player: { id: socket.id, name: trimmedName },
                 });
 
-                console.log(`${name} joined lobby ${lobby.code}`);
+                console.log(`${trimmedName} joined lobby ${lobby.code}`);
             } catch (err) {
                 socket.emit('lobby:error', { message: (err as Error).message });
             }
@@ -286,23 +324,36 @@ export function setupSocketHandlers(io: Server): void {
 
         /**
          * disconnect - Handle player disconnection
-         * Auto-marks player as submitted (so game can continue)
-         * Removes player from lobby with host migration if needed
+         * During game: marks as disconnected (can rejoin)
+         * In lobby: fully removes player
          */
         socket.on('disconnect', () => {
             console.log(`Player disconnected: ${socket.id}`);
 
-            // Handle game disconnect
             const lobbyCode = lobbyManager.getPlayerLobby(socket.id);
-            if (lobbyCode) {
-                const game = gameManager.getGame(lobbyCode);
-                if (game) {
-                    gameManager.handleDisconnect(lobbyCode, socket.id);
-                }
-            }
+            if (!lobbyCode) return;
 
-            // Handle lobby disconnect
-            handlePlayerLeave(io, socket);
+            const lobby = lobbyManager.getLobby(lobbyCode);
+            const game = gameManager.getGame(lobbyCode);
+
+            if (game && lobby?.status === 'in-game') {
+                // Game in progress - mark as disconnected, allow rejoin
+                gameManager.handleDisconnect(lobbyCode, socket.id);
+                const result = lobbyManager.markDisconnected(socket.id);
+
+                if (result?.lobby) {
+                    const state = lobbyManager.toLobbyState(result.lobby);
+                    io.to(lobbyCode).emit('lobby:state', state);
+                    io.to(lobbyCode).emit('lobby:player-disconnected', {
+                        playerId: socket.id,
+                        playerName: result.playerName,
+                    });
+                    console.log(`${result.playerName} disconnected from game (can rejoin)`);
+                }
+            } else {
+                // Not in game - fully remove
+                handlePlayerLeave(io, socket);
+            }
         });
     });
 }

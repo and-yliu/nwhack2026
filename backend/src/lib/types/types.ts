@@ -11,6 +11,7 @@ export interface Player {
     name: string;        // Display name
     isHost: boolean;
     isReady: boolean;
+    isConnected: boolean; // Track disconnect for rejoin
 }
 
 export interface GameSettings {
@@ -117,12 +118,7 @@ export interface SubmitPhotoPayload {
 // Lobby state broadcast
 export interface LobbyStatePayload {
     code: string;
-    players: Array<{
-        id: string;
-        name: string;
-        isHost: boolean;
-        isReady: boolean;
-    }>;
+    players: Array<Player>;
     hostId: string;
     status: 'waiting' | 'starting' | 'in-game';
     allReady: boolean;
@@ -184,4 +180,10 @@ export interface GameCompletePayload {
 export interface FinalAwardsPayload {
     judgesFavorite: Array<{ playerId: string; name: string; wins: number }>;
     mostClueless: Array<{ playerId: string; name: string; wins: number }>;
+}
+
+// Rejoin payload
+export interface RejoinPayload {
+    code: string;
+    name: string;
 }
