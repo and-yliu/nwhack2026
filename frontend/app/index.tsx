@@ -12,9 +12,13 @@ export default function HomeScreen() {
   const [nickname, setNickname] = useState('');
 
   const handleCreateGame = () => {
+    if (!nickname.trim()) {
+      alert('Please enter a nickname');
+      return;
+    }
     // Navigate to create game flow
     console.log('Create Game with nickname:', nickname);
-    router.push('/game'); // Navigate to game flow
+    router.push({ pathname: '/waiting-room', params: { nickname } });
   };
 
   const handleJoinGame = () => {
@@ -73,15 +77,42 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  background: {
-    flex: 1,
-    backgroundColor: Colors.neo.background,
-  },
   container: {
     flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center', // Center content vertically
+    paddingHorizontal: 20,
+  },
+  background: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: Colors.neo.background,
+  },
+  titleContainer: {
+    marginBottom: 50, // Space between title and input
+  },
+  title: {
+    fontSize: 48,
+    fontFamily: 'Nunito_700Bold',
+    color: '#000', // Black text
+    textAlign: 'center',
+    lineHeight: 56, // Adjust for tighter stacking if needed
+  },
+  inputContainer: {
+    width: '100%',
+    marginBottom: 30, // Space between input and buttons
+    height: 50,
+  },
+  buttonContainer: {
+    width: '100%',
+    gap: 15, // Space between buttons
   },
   keyboardAvoid: {
     flex: 1,
+    width: '100%',
   },
   content: {
     flex: 1,
@@ -111,7 +142,6 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     width: '100%',
-    gap: 16,
   },
   button: {
     width: '100%',
