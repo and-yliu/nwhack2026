@@ -19,13 +19,14 @@ Generate a fun, short Mad Libs-style story with EXACTLY the requested number of 
 **BLANK REQUIREMENTS:**
 For each blank, provide a fun and creative riddle (theme), and a criteria for judging the player's submission. Here are some examples of good pairs:
 
-**EXAMPLES OF GOOD THEMES + CRITERIA:**
+**EXAMPLES OF THEMES + CRITERIA:**
 - Theme: A thing that holds water but is not a cup
 - Criteria: The most disgusting
 - Theme: Something you acquire for free, but cost a fortune to get rid of
 - Criteria: The most biologically regretful
 - Theme: I cost thousands of dollars, yet I serve no purpose other than reminding you of your failures
-- Criteria: The most financially irresponsible object
+- Criteria: The most inhuman
+- **NOTE**: The criteria MUST be in the format "The most [adjective]"
 
 Make the story cohesive and the blanks flow naturally within the narrative!`;
 
