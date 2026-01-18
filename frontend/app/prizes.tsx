@@ -3,12 +3,40 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '@/constants/theme';
 import { NeoButton } from '@/components/ui/NeoButton';
+import { useSocket } from '@/hooks/useSocket';
 
 export default function PrizesScreen() {
     const router = useRouter();
+    const { lobbyState, socket } = useSocket();
 
     const handleReturnToRoom = () => {
-        router.back();
+        if (!lobbyState || !lobbyState.code) {
+            // Fallback if state is lost
+            router.replace('/');
+            return;
+        }
+
+        const isHost = socket?.id === lobbyState.hostId;
+        const currentPlayer = lobbyState.players.find(p => p.id === socket?.id);
+        const nickname = currentPlayer?.name || 'Player';
+
+        if (isHost) {
+            router.push({
+                pathname: '/host-waiting-room',
+                params: {
+                    nickname,
+                    roomPin: lobbyState.code
+                }
+            });
+        } else {
+            router.push({
+                pathname: '/player-waiting-room',
+                params: {
+                    nickname,
+                    roomPin: lobbyState.code
+                }
+            });
+        }
     };
 
     const handleQuitRoom = () => {
@@ -62,7 +90,7 @@ export default function PrizesScreen() {
                         title="Return to Room"
                         onPress={handleReturnToRoom}
                         variant="primary"
-                        // style={{ backgroundColor: '#C88A58' }} // Custom brownish color from image
+                    // style={{ backgroundColor: '#C88A58' }} // Custom brownish color from image
                     />
                     <NeoButton
                         title="Quit Room"
