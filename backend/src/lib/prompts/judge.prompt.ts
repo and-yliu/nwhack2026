@@ -21,7 +21,7 @@ Given the THEME and CRITERIA, pick the ONE submission that best matches.
 
 **OUTPUT:**
 - Pick exactly ONE winner
-- Provide a brief, fun explanation for your choice`;
+- Provide a fun explanation for your choice`;
 
 
 export const JUDGE_SCHEMA = {
@@ -33,7 +33,7 @@ export const JUDGE_SCHEMA = {
         },
         judgesExplanation: {
             type: "string",
-            description: "A brief, fun explanation of why this submission won",
+            description: "A fun explanation of why this submission won",
         },
     },
     required: ["chosenPlayerId", "judgesExplanation"],

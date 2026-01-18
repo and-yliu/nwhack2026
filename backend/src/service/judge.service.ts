@@ -44,6 +44,7 @@ export interface BardResult {
 /** Final round result */
 export interface RoundResult {
     winnerPlayerId: string;
+    judgesExplanation: string;
     bestWord: string;
     oneLiner: string;
 }
@@ -90,8 +91,8 @@ export class JudgeService {
     private client: OpenRouter;
 
     // Model assignments per agent
-    private readonly JUDGE_MODEL = "google/gemini-2.0-flash-001";
-    private readonly BARD_MODEL = "google/gemini-2.0-flash-001";
+    private readonly JUDGE_MODEL = "google/gemini-3-flash-preview";
+    private readonly BARD_MODEL = "google/gemini-3-flash-preview";
 
     constructor(apiKey?: string) {
         const key = apiKey || process.env.OPENROUTER_API_KEY;
@@ -218,6 +219,7 @@ export class JudgeService {
 
         return {
             winnerPlayerId: judgeResult.chosenPlayerId,
+            judgesExplanation: judgeResult.judgesExplanation,
             bestWord: bardResult.bestWord,
             oneLiner: bardResult.oneLiner,
         };

@@ -69,10 +69,15 @@ function printResults(result: any, theme: string, criteria: string) {
     console.log(`📏 Criteria: "${criteria}"\n`);
 
     console.log("─".repeat(80));
-    console.log("🏆 WINNER");
+    console.log("⚖️  JUDGE'S DECISION");
     console.log("─".repeat(80));
-    console.log(`\nPlayer ID: ${result.winnerPlayerId}`);
-    console.log(`Best Word: "${result.bestWord}"`);
+    console.log(`\nChosen Player: ${result.winnerPlayerId}`);
+    console.log(`Explanation: ${result.judgesExplanation}`);
+
+    console.log("\n" + "─".repeat(80));
+    console.log("🎭 BARD'S ANNOUNCEMENT");
+    console.log("─".repeat(80));
+    console.log(`\nBest Word: "${result.bestWord}"`);
     console.log(`One-Liner: "${result.oneLiner}"`);
 
     console.log("\n" + "=".repeat(80) + "\n");
