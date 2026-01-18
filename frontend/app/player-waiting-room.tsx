@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { View, Text, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,12 +18,26 @@ export default function PlayerWaitingRoomScreen() {
     const nickname = params.nickname;
     const roomPin = params.roomPin;
 
-    const { lobbyState, error, setReady, gameStart, socket } = useSocket();
+    const { lobbyState, error, setReady, leaveLobby, socket, pendingNavigation, clearPendingNavigation } = useSocket();
 
     // Get current player's ready status from lobby state
     const currentPlayerId = socket?.id;
     const currentPlayer = lobbyState?.players?.find(p => p.id === currentPlayerId);
     const isReady = currentPlayer?.isReady ?? false;
+
+    const hasSwitchedToHostRef = useRef(false);
+    const switchToHost = useCallback(
+        (pin: string) => {
+            if (hasSwitchedToHostRef.current) return;
+            hasSwitchedToHostRef.current = true;
+            clearPendingNavigation();
+            router.replace({
+                pathname: '/host-waiting-room',
+                params: { roomPin: pin, nickname },
+            });
+        },
+        [clearPendingNavigation, router, nickname]
+    );
 
     // Use lobby state if available, otherwise show defaults
     const rounds = lobbyState?.settings?.rounds ?? 3;
@@ -36,12 +50,30 @@ export default function PlayerWaitingRoomScreen() {
         setReady(!isReady);
     };
 
+    const handleLeaveRoom = () => {
+        leaveLobby();
+        router.replace('/');
+    };
+
     // Navigate to game when it starts
     useEffect(() => {
-        if (gameStart) {
+        if (pendingNavigation && pendingNavigation.type === 'host-waiting-room') {
+            switchToHost(pendingNavigation.roomPin);
+            return;
+        }
+
+        if (pendingNavigation && pendingNavigation.type === 'game') {
+            clearPendingNavigation();
             router.push('/game');
         }
-    }, [gameStart]);
+    }, [pendingNavigation, clearPendingNavigation, router, switchToHost]);
+
+    useEffect(() => {
+        if (!lobbyState?.code) return;
+        if (!currentPlayerId) return;
+        if (lobbyState.hostId !== currentPlayerId) return;
+        switchToHost(lobbyState.code);
+    }, [lobbyState?.code, lobbyState?.hostId, currentPlayerId, switchToHost]);
 
     // Show errors
     useEffect(() => {
@@ -156,8 +188,13 @@ export default function PlayerWaitingRoomScreen() {
                 </View>
             </View>
 
-            {/* Ready Button */}
-            <View className="p-5 pb-24">
+            {/* Footer */}
+            <View className="p-5 pb-24 gap-4">
+                <NeoButton
+                    title="LEAVE ROOM"
+                    onPress={handleLeaveRoom}
+                    variant="outline"
+                />
                 <NeoButton
                     title={isReady ? "READY ✓" : "READY"}
                     onPress={handleReady}
