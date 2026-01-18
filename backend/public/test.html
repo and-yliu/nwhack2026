@@ -133,6 +133,14 @@
   </div>
 
   <div class="section">
+    <h3>📤 File Upload Test</h3>
+    <input type="file" id="photoInput" accept="image/jpeg,image/png,image/webp,image/heic">
+    <button onclick="uploadPhoto()">Upload Photo</button>
+    <div id="uploadResult" style="margin-top: 0.5rem; font-size: 12px;"></div>
+    <div id="uploadPreview" style="margin-top: 0.5rem;"></div>
+  </div>
+
+  <div class="section">
     <h3>Event Log</h3>
     <button onclick="clearLog()">Clear</button>
     <div id="log"></div>
@@ -221,6 +229,49 @@
       // In real app, this would be the path from /upload endpoint
       socket.emit('game:submit', { photoPath: 'uploads/test.jpg' });
       log('game:submit { photoPath: "uploads/test.jpg" }', 'send');
+    }
+
+    async function uploadPhoto() {
+      const fileInput = document.getElementById('photoInput');
+      const resultDiv = document.getElementById('uploadResult');
+      const previewDiv = document.getElementById('uploadPreview');
+
+      if (!fileInput.files || fileInput.files.length === 0) {
+        resultDiv.innerHTML = '<span style="color: #ff4444;">No file selected!</span>';
+        return;
+      }
+
+      const file = fileInput.files[0];
+      const formData = new FormData();
+      formData.append('photo', file);
+
+      resultDiv.innerHTML = '<span style="color: #00d9ff;">Uploading...</span>';
+      previewDiv.innerHTML = '';
+
+      try {
+        const response = await fetch('http://localhost:3000/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          resultDiv.innerHTML = '<span style="color: #00ff88;">✅ Upload successful!</span><br>' +
+            '<pre style="color: #aaa; margin: 0.5rem 0;">' + JSON.stringify(data, null, 2) + '</pre>';
+
+          // Show preview of uploaded image
+          previewDiv.innerHTML = '<img src="http://localhost:3000/' + data.path + '" style="max-width: 200px; border-radius: 4px; margin-top: 0.5rem;">';
+
+          log('Upload success: ' + JSON.stringify(data), 'receive');
+        } else {
+          resultDiv.innerHTML = '<span style="color: #ff4444;">❌ Error: ' + data.error + '</span>';
+          log('Upload error: ' + data.error, 'error');
+        }
+      } catch (error) {
+        resultDiv.innerHTML = '<span style="color: #ff4444;">❌ Network error: ' + error.message + '</span>';
+        log('Upload network error: ' + error.message, 'error');
+      }
     }
 
     function log(message, type = '') {
