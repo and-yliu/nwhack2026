@@ -5,22 +5,15 @@ import { useRouter } from 'expo-router';
 
 import { Colors } from '@/constants/theme';
 import { NeoButton } from '@/components/ui/NeoButton';
-import { NeoInput } from '@/components/ui/NeoInput';
+import { NeoPinInput } from '@/components/ui/NeoPinInput';
 
-export default function HomeScreen() {
+export default function JoinScreen() {
   const router = useRouter();
-  const [nickname, setNickname] = useState('');
+  const [pin, setPin] = useState('');
 
-  const handleCreateGame = () => {
-    // Navigate to create game flow
-    console.log('Create Game with nickname:', nickname);
-    router.push('/explore'); // Temporary navigation
-  };
-
-  const handleJoinGame = () => {
-    // Navigate to join game flow
-    console.log('Join Game');
-    router.push('/join');
+  const handleJoinRoom = () => {
+    console.log('Joining room with PIN:', pin);
+    // Add logic to join room
   };
 
   return (
@@ -32,28 +25,20 @@ export default function HomeScreen() {
             style={styles.keyboardAvoid}
           >
             <View style={styles.content}>
-              <Text style={styles.title}>Welcome!</Text>
+              <Text style={styles.title}>Enter the 4 digit room PIN:</Text>
 
               <View style={styles.inputContainer}>
-                <NeoInput
-                  placeholder="Nickname"
-                  value={nickname}
-                  onChangeText={setNickname}
-                  autoCorrect={false}
+                <NeoPinInput
+                  length={4}
+                  onComplete={(code) => setPin(code)}
                 />
               </View>
 
               <View style={styles.buttonContainer}>
                 <NeoButton
-                  title="+ Create a Game"
-                  onPress={handleCreateGame}
+                  title="Join Room"
+                  onPress={handleJoinRoom}
                   variant="primary"
-                  style={styles.button}
-                />
-                <NeoButton
-                  title="👥 Join a Game"
-                  onPress={handleJoinGame}
-                  variant="outline"
                   style={styles.button}
                 />
               </View>
@@ -83,18 +68,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   title: {
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: '700',
     marginBottom: 48,
     color: Colors.neo.text,
+    textAlign: 'center',
   },
   inputContainer: {
     width: '100%',
-    marginBottom: 32,
+    marginBottom: 48,
+    alignItems: 'center',
   },
   buttonContainer: {
     width: '100%',
-    gap: 16,
+    paddingHorizontal: 24,
   },
   button: {
     width: '100%',
