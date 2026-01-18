@@ -318,6 +318,18 @@ export function setupSocketHandlers(io: Server): void {
             }
         });
 
+        socket.on('game:reaction', ({ icon }) => {
+            const lobbyCode = lobbyManager.getPlayerLobby(socket.id);
+            if (!lobbyCode) {
+                socket.emit('game:error', { message: 'Not in a game' });
+                return;
+            }
+            socket.to(lobbyCode).emit('game:reaction', { 
+                playerId: socket.id, 
+                icon 
+            });
+        });
+
         // ========================================================================
         // Disconnect
         // ========================================================================
