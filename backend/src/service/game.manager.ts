@@ -435,6 +435,24 @@ export class GameManager {
             }
         }
     }
+
+    /**
+     * Handle player rejoin - update socket ID in game state
+     */
+    handleRejoin(lobbyCode: string, oldSocketId: string, newSocketId: string): boolean {
+        const game = this.games.get(lobbyCode);
+        if (!game) return false;
+
+        const player = game.players.get(oldSocketId);
+        if (!player) return false;
+
+        // Update player ID in game state
+        game.players.delete(oldSocketId);
+        player.id = newSocketId;
+        game.players.set(newSocketId, player);
+
+        return true;
+    }
 }
 
 // Export singleton instance
