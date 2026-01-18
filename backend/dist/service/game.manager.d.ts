@@ -7,6 +7,7 @@ export declare class GameManager {
     private games;
     private roundTimers;
     private tickIntervals;
+    private nextRoundReady;
     private onTick;
     private onRoundEnd;
     /**
@@ -29,6 +30,26 @@ export declare class GameManager {
      * This prevents duplicate judging/results/next-round emits caused by race conditions.
      */
     private tryEndRound;
+    /**
+     * Reset next-round readiness tracking for a lobby.
+     * Call after broadcasting a round result (or when starting a new round).
+     */
+    resetNextRoundReady(lobbyCode: string): void;
+    /**
+     * Mark a player as ready to proceed from results -> next round/complete.
+     * Returns current counts for UI.
+     */
+    setPlayerReadyForNextRound(lobbyCode: string, playerId: string): {
+        readyCount: number;
+        totalPlayers: number;
+        allReady: boolean;
+    };
+    getNextRoundReadyStatus(lobbyCode: string): {
+        readyCount: number;
+        totalPlayers: number;
+        allReady: boolean;
+    };
+    removePlayerFromGame(lobbyCode: string, playerId: string): void;
     /**
      * Start the round timer
      */

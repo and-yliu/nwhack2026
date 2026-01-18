@@ -14,6 +14,7 @@ export default function GameScreen() {
     const cameraRef = useRef<CameraView>(null);
     const [photo, setPhoto] = useState<string | null>(null);
     const [isUploading, setIsUploading] = useState(false);
+    const [hasSubmitted, setHasSubmitted] = useState(false);
 
     const {
         lobbyState,
@@ -22,6 +23,7 @@ export default function GameScreen() {
         tick,
         submittedPlayerIds,
         isJudging,
+        nextRoundStatus,
         pendingNavigation,
         clearPendingNavigation,
         error,
@@ -42,10 +44,22 @@ export default function GameScreen() {
     }, [pendingNavigation, clearPendingNavigation, router]);
 
     useEffect(() => {
+        if (pendingNavigation?.type === 'game') {
+            clearPendingNavigation();
+        }
+    }, [pendingNavigation, clearPendingNavigation]);
+
+    useEffect(() => {
         if (error) {
             Alert.alert('Error', error);
         }
     }, [error]);
+
+    useEffect(() => {
+        setPhoto(null);
+        setIsUploading(false);
+        setHasSubmitted(false);
+    }, [currentRound?.round]);
 
     const totalSeconds = lobbyState?.settings?.roundTimeSeconds ?? 60;
     const timeLeft = tick?.remainingSeconds ?? totalSeconds;
@@ -84,13 +98,19 @@ export default function GameScreen() {
     };
 
     const handleSubmit = () => {
-        if (!photo || isUploading) return;
+        if (!photo || isUploading || hasSubmitted) return;
+        setHasSubmitted(true);
         setIsUploading(true);
         uploadAndSubmitPhoto(photo)
+            .then((ok) => {
+                if (!ok) {
+                    setHasSubmitted(false);
+                }
+            })
             .finally(() => setIsUploading(false));
     };
 
-    const totalPlayers = lobbyState?.players?.length ?? 0;
+    const totalPlayers = lobbyState?.players?.length ?? nextRoundStatus?.totalPlayers ?? 0;
     const submittedCount = submittedPlayerIds.length;
 
     return (
@@ -156,20 +176,24 @@ export default function GameScreen() {
             <View style={styles.footer}>
                 {photo ? (
                     <View style={styles.reviewControls}>
-                        <NeoButton
-                            title={isUploading ? 'uploading...' : 'submit'}
-                            onPress={handleSubmit}
-                            style={styles.submitButtonContainer}
-                            variant="primary"
-                        />
-                        <NeoButton
-                            title="retake"
-                            onPress={handleRetake}
-                            style={styles.retakeButtonContainer}
-                            variant="outline"
-                        />
+                        {!hasSubmitted ? (
+                            <>
+                                <NeoButton
+                                    title={isUploading ? 'uploading...' : 'submit'}
+                                    onPress={handleSubmit}
+                                    style={styles.submitButtonContainer}
+                                    variant="primary"
+                                />
+                                <NeoButton
+                                    title="retake"
+                                    onPress={handleRetake}
+                                    style={styles.retakeButtonContainer}
+                                    variant="outline"
+                                />
+                            </>
+                        ) : null}
                         <View style={styles.statusContainer}>
-                            <Text style={styles.statusCount}>{submittedCount}/7</Text>
+                            <Text style={styles.statusCount}>{submittedCount}/{totalPlayers || 0}</Text>
                             <Text style={styles.statusLabel}>have submitted</Text>
                         </View>
                     </View>

@@ -11,6 +11,7 @@ export class GameManager {
     games = new Map();
     roundTimers = new Map();
     tickIntervals = new Map();
+    nextRoundReady = new Map();
     // Callbacks for socket events
     onTick = undefined;
     onRoundEnd = undefined;
@@ -78,6 +79,49 @@ export class GameManager {
             this.onRoundEnd(lobbyCode);
         }
         return true;
+    }
+    /**
+     * Reset next-round readiness tracking for a lobby.
+     * Call after broadcasting a round result (or when starting a new round).
+     */
+    resetNextRoundReady(lobbyCode) {
+        this.nextRoundReady.set(lobbyCode, new Set());
+    }
+    /**
+     * Mark a player as ready to proceed from results -> next round/complete.
+     * Returns current counts for UI.
+     */
+    setPlayerReadyForNextRound(lobbyCode, playerId) {
+        const game = this.games.get(lobbyCode);
+        if (!game) {
+            return { readyCount: 0, totalPlayers: 0, allReady: false };
+        }
+        if (!this.nextRoundReady.has(lobbyCode)) {
+            this.nextRoundReady.set(lobbyCode, new Set());
+        }
+        const readySet = this.nextRoundReady.get(lobbyCode);
+        readySet.add(playerId);
+        const totalPlayers = game.players.size;
+        const readyCount = readySet.size;
+        const allReady = totalPlayers > 0 && readyCount >= totalPlayers;
+        return { readyCount, totalPlayers, allReady };
+    }
+    getNextRoundReadyStatus(lobbyCode) {
+        const game = this.games.get(lobbyCode);
+        if (!game)
+            return { readyCount: 0, totalPlayers: 0, allReady: false };
+        const readySet = this.nextRoundReady.get(lobbyCode) ?? new Set();
+        const totalPlayers = game.players.size;
+        const readyCount = readySet.size;
+        const allReady = totalPlayers > 0 && readyCount >= totalPlayers;
+        return { readyCount, totalPlayers, allReady };
+    }
+    removePlayerFromGame(lobbyCode, playerId) {
+        const game = this.games.get(lobbyCode);
+        if (!game)
+            return;
+        game.players.delete(playerId);
+        this.nextRoundReady.get(lobbyCode)?.delete(playerId);
     }
     /**
      * Start the round timer
@@ -246,6 +290,7 @@ export class GameManager {
         game.currentRound++;
         game.roundDeadline = Date.now() + (game.roundTimeSeconds * 1000);
         game.status = 'round';
+        this.resetNextRoundReady(lobbyCode);
         this.startRoundTimer(lobbyCode);
         return game;
     }
@@ -351,6 +396,7 @@ export class GameManager {
     endGame(lobbyCode) {
         this.clearTimers(lobbyCode);
         this.games.delete(lobbyCode);
+        this.nextRoundReady.delete(lobbyCode);
     }
     /**
      * Handle player disconnect

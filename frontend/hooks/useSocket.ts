@@ -64,6 +64,11 @@ export interface RoundResultPayload {
     oneliner: string;
 }
 
+export interface NextRoundStatusPayload {
+    readyCount: number;
+    totalPlayers: number;
+}
+
 // Navigation types for pending navigation
 export type PendingNavigation =
     | { type: 'host-waiting-room'; roomPin: string }
@@ -90,6 +95,7 @@ interface SocketState {
     isJudging: boolean;
     roundResult: RoundResultPayload | null;
     roundResultContext: RoundPayload | null;
+    nextRoundStatus: NextRoundStatusPayload | null;
     pendingNavigation: PendingNavigation;
     remoteReactions: Array<{ id: string; icon: string; playerId: string }>;
 }
@@ -105,6 +111,7 @@ let globalState: SocketState = {
     isJudging: false,
     roundResult: null,
     roundResultContext: null,
+    nextRoundStatus: null,
     pendingNavigation: null,
     remoteReactions: [],
 };
@@ -182,6 +189,7 @@ function getSocket(): Socket {
             socketInstance.off('game:player-submitted');
             socketInstance.off('game:judging');
             socketInstance.off('game:round-result');
+            socketInstance.off('game:next-round-status');
             socketInstance.off('game:error');
 
             socketInstance.on('connect', () => {
@@ -251,6 +259,7 @@ function getSocket(): Socket {
                     isJudging: false,
                     roundResult: null,
                     roundResultContext: null,
+                    nextRoundStatus: null,
                     pendingNavigation: { type: 'game' }
                 });
             });
@@ -280,6 +289,8 @@ function getSocket(): Socket {
                     isJudging: false,
                     roundResult: null,
                     roundResultContext: null,
+                    nextRoundStatus: null,
+                    pendingNavigation: { type: 'game' },
                 });
             });
 
@@ -308,8 +319,13 @@ function getSocket(): Socket {
                     isJudging: false,
                     roundResult: payload,
                     roundResultContext: globalState.currentRound,
+                    nextRoundStatus: null,
                     pendingNavigation: { type: 'round-result' },
                 });
+            });
+
+            socketInstance.on('game:next-round-status', (payload: NextRoundStatusPayload) => {
+                setGlobalState({ nextRoundStatus: payload });
             });
 
             socketInstance.on('game:error', ({ message }: { message: string }) => {
@@ -366,8 +382,10 @@ export function useSocket() {
             isJudging: false,
             roundResult: null,
             roundResultContext: null,
+            nextRoundStatus: null,
             error: null,
             pendingNavigation: null,
+            remoteReactions: [],
         });
     }, []);
 
@@ -391,7 +409,7 @@ export function useSocket() {
         socket.emit('game:submit', { photoPath });
     }, []);
 
-    const uploadAndSubmitPhoto = useCallback(async (photoUri: string) => {
+    const uploadAndSubmitPhoto = useCallback(async (photoUri: string): Promise<boolean> => {
         try {
             const filename = photoUri.split('/').pop() || 'photo.jpg';
             const ext = filename.split('.').pop()?.toLowerCase();
@@ -414,14 +432,20 @@ export function useSocket() {
             if (!res.ok || !data?.photoPath) {
                 const message = data?.error ?? 'Failed to upload photo';
                 setGlobalState({ error: message });
-                return;
+                return false;
             }
 
             submitPhoto(data.photoPath);
+            return true;
         } catch (err) {
             setGlobalState({ error: (err as Error).message });
+            return false;
         }
     }, [submitPhoto]);
+
+    const readyForNextRound = useCallback(() => {
+        socket.emit('game:next-round-ready');
+    }, []);
 
     // Clear pending navigation after navigation has occurred
     const clearPendingNavigation = useCallback(() => {
@@ -452,6 +476,7 @@ export function useSocket() {
         isJudging: state.isJudging,
         roundResult: state.roundResult,
         roundResultContext: state.roundResultContext,
+        nextRoundStatus: state.nextRoundStatus,
         pendingNavigation: state.pendingNavigation,
         remoteReactions: state.remoteReactions,
         createLobby,
@@ -462,6 +487,7 @@ export function useSocket() {
         startGame,
         submitPhoto,
         uploadAndSubmitPhoto,
+        readyForNextRound,
         clearPendingNavigation,
         sendReaction,
         consumeReaction,

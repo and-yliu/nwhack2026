@@ -13,19 +13,30 @@ import { SERVER_URL, useSocket } from '@/hooks/useSocket';
 
 export default function RoundResultScreen() {
   const router = useRouter();
-  const { roundResult, roundResultContext, gameStart, remoteReactions, consumeReaction, sendReaction } = useSocket();
+  const {
+    roundResult,
+    roundResultContext,
+    nextRoundStatus,
+    readyForNextRound,
+    currentRound,
+    pendingNavigation,
+    clearPendingNavigation,
+    remoteReactions,
+    consumeReaction,
+    sendReaction,
+  } = useSocket();
 
   // Animation States
   const [step, setStep] = useState(0); // 0: Init, 1: Criteria, 2: Winner, 3: Comment, 4: Done
   const opacityAnim = useRef(new Animated.Value(0)).current; // For Comment Card
   const hasRun = useRef(false); // Ref to prevent double execution
+  const [hasConfirmed, setHasConfirmed] = useState(false);
 
   const criteria = roundResultContext?.criteria ?? '';
   const theme = roundResultContext?.theme ?? '';
   const winnerName = roundResult?.winnerName ?? '';
   const winnerText = theme ? `${winnerName} would use this: ${theme}` : `${winnerName} wins this round`;
   const comment = roundResult?.oneliner ?? '';
-  const totalRounds = roundResultContext?.totalRounds ?? gameStart?.totalRounds ?? 0;
   const winnerPhotoUrl = roundResult?.photoPath
     ? `${SERVER_URL}/${roundResult.photoPath.replace(/^\/+/, '')}`
     : null;
@@ -36,6 +47,7 @@ export default function RoundResultScreen() {
     hasRun.current = false;
     opacityAnim.setValue(0);
     setStep(0);
+    setHasConfirmed(false);
   }, [roundResult?.round, opacityAnim]);
 
   useEffect(() => {
@@ -83,8 +95,23 @@ export default function RoundResultScreen() {
     runSequence();
   }, [opacityAnim, player, roundResult]); // Depend on player availability
 
-  const handleNextRound = () => {
-    router.back();
+  useEffect(() => {
+    if (!roundResult?.round) return;
+    if (!currentRound?.round) return;
+    if (currentRound.round === roundResult.round + 1) {
+      router.replace('/game');
+    }
+  }, [currentRound?.round, roundResult?.round, router]);
+
+  useEffect(() => {
+    if (pendingNavigation?.type !== 'game') return;
+    clearPendingNavigation();
+    router.replace('/game');
+  }, [pendingNavigation, clearPendingNavigation, router]);
+
+  const handleReadyNextRound = () => {
+    readyForNextRound();
+    setHasConfirmed(true);
   };
 
   return (
@@ -149,8 +176,12 @@ export default function RoundResultScreen() {
             </View>
 
             <NeoButton
-              title={roundResult ? `Next Round (${roundResult.round}/${totalRounds || '?'})` : 'Next Round'}
-              onPress={handleNextRound}
+              title={
+                hasConfirmed
+                  ? 'READY ✓'
+                  : `READY (${nextRoundStatus?.readyCount ?? 0}/${nextRoundStatus?.totalPlayers ?? 0})`
+              }
+              onPress={handleReadyNextRound}
               variant="primary"
               style={styles.nextButton}
             />
