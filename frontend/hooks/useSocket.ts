@@ -163,6 +163,19 @@ function getSocket(): Socket {
                 // lobby:state is also emitted, so this is just for logging
             });
 
+            socketInstance.on(
+                'lobby:host-changed',
+                ({ hostId, code, previousHostId }: { hostId: string; code: string; previousHostId: string }) => {
+                    console.log('Host changed:', { hostId, code, previousHostId });
+
+                    if (socketInstance?.id && socketInstance.id === hostId) {
+                        setGlobalState({
+                            pendingNavigation: { type: 'host-waiting-room', roomPin: code },
+                        });
+                    }
+                }
+            );
+
             socketInstance.on('game:start', (payload: GameStartPayload) => {
                 console.log('Game started:', payload);
                 setGlobalState({

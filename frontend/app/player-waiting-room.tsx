@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { View, Text, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,6 +15,7 @@ export default function PlayerWaitingRoomScreen() {
     }>();
     const router = useRouter();
 
+    const nickname = params.nickname;
     const roomPin = params.roomPin;
 
     const { lobbyState, error, setReady, leaveLobby, socket, pendingNavigation, clearPendingNavigation } = useSocket();
@@ -23,6 +24,20 @@ export default function PlayerWaitingRoomScreen() {
     const currentPlayerId = socket?.id;
     const currentPlayer = lobbyState?.players?.find(p => p.id === currentPlayerId);
     const isReady = currentPlayer?.isReady ?? false;
+
+    const hasSwitchedToHostRef = useRef(false);
+    const switchToHost = useCallback(
+        (pin: string) => {
+            if (hasSwitchedToHostRef.current) return;
+            hasSwitchedToHostRef.current = true;
+            clearPendingNavigation();
+            router.replace({
+                pathname: '/host-waiting-room',
+                params: { roomPin: pin, nickname },
+            });
+        },
+        [clearPendingNavigation, router, nickname]
+    );
 
     // Use lobby state if available, otherwise show defaults
     const rounds = lobbyState?.settings?.rounds ?? 3;
@@ -42,11 +57,23 @@ export default function PlayerWaitingRoomScreen() {
 
     // Navigate to game when it starts
     useEffect(() => {
+        if (pendingNavigation && pendingNavigation.type === 'host-waiting-room') {
+            switchToHost(pendingNavigation.roomPin);
+            return;
+        }
+
         if (pendingNavigation && pendingNavigation.type === 'game') {
             clearPendingNavigation();
             router.push('/game');
         }
-    }, [pendingNavigation, clearPendingNavigation, router]);
+    }, [pendingNavigation, clearPendingNavigation, router, switchToHost]);
+
+    useEffect(() => {
+        if (!lobbyState?.code) return;
+        if (!currentPlayerId) return;
+        if (lobbyState.hostId !== currentPlayerId) return;
+        switchToHost(lobbyState.code);
+    }, [lobbyState?.code, lobbyState?.hostId, currentPlayerId, switchToHost]);
 
     // Show errors
     useEffect(() => {
