@@ -1,51 +1,124 @@
 import { useState, useEffect } from 'react';
-import { Text, View, TouchableWithoutFeedback, Keyboard, Alert, StyleSheet } from 'react-native';
+import { Text, View, TouchableWithoutFeedback, Keyboard, Alert, StyleSheet, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useCameraPermissions } from 'expo-camera';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  withDelay,
+  withSequence,
+  withRepeat,
+  Easing,
+  FadeIn,
+  FadeInDown,
+  FadeInUp,
+} from 'react-native-reanimated';
 
 import { Colors } from '@/constants/theme';
 import { NeoButton } from '@/components/ui/NeoButton';
 import { NeoInput } from '@/components/ui/NeoInput';
 import { useSocket } from '@/hooks/useSocket';
 
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const fullWidthButtonStyle = { width: '100%' } as const;
 
-// Neo Brutalism Logo Component
+// Neo Brutalism Animated Logo Component
 const SnapPlotLogo = () => {
+  const snapRotation = useSharedValue(-3);
+  const plotRotation = useSharedValue(2);
+  const cameraScale = useSharedValue(1);
+  const decorDot2Scale = useSharedValue(0);
+
+  useEffect(() => {
+    // Subtle idle animation for SNAP box
+    snapRotation.value = withRepeat(
+      withSequence(
+        withTiming(-5, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(-1, { duration: 2000, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      true
+    );
+
+    // Subtle idle animation for PLOT box
+    plotRotation.value = withRepeat(
+      withSequence(
+        withTiming(4, { duration: 2500, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0, { duration: 2500, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      true
+    );
+
+    // Camera pulse animation
+    cameraScale.value = withRepeat(
+      withSequence(
+        withTiming(1.1, { duration: 800, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1, { duration: 800, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      true
+    );
+
+    // Pop in decorative dot
+    decorDot2Scale.value = withDelay(400, withSpring(1, { damping: 8 }));
+  }, []);
+
+  const snapAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${snapRotation.value}deg` }],
+  }));
+
+  const plotAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${plotRotation.value}deg` }],
+  }));
+
+  const cameraAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: '15deg' }, { scale: cameraScale.value }],
+  }));
+
+
+
+  const decorDot2Style = useAnimatedStyle(() => ({
+    transform: [{ scale: decorDot2Scale.value }],
+  }));
+
   return (
-    <View style={styles.logoContainer}>
+    <Animated.View
+      style={styles.logoContainer}
+      entering={FadeIn.duration(600).springify()}
+    >
       {/* SNAP text with neo brutalist box */}
-      <View style={styles.snapBox}>
+      <Animated.View style={[styles.snapBox, snapAnimatedStyle]}>
         <Text style={styles.snapText}>SNAP</Text>
-      </View>
+      </Animated.View>
 
       {/* PLOT text with offset neo brutalist box */}
-      <View style={styles.plotBox}>
+      <Animated.View style={[styles.plotBox, plotAnimatedStyle]}>
         <Text style={styles.plotText}>PLOT</Text>
-      </View>
+      </Animated.View>
 
       {/* Camera icon accent */}
       <View style={styles.cameraIconContainer}>
-        <View style={styles.cameraBody}>
+        <Animated.View style={[styles.cameraBody, cameraAnimatedStyle]}>
           <View style={styles.cameraLens} />
-        </View>
+        </Animated.View>
       </View>
 
       {/* Decorative elements */}
-      <View style={styles.decorDot1} />
-      <View style={styles.decorDot2} />
+      <Animated.View style={[styles.decorDot2, decorDot2Style]} />
       <View style={styles.decorLine} />
-    </View>
+    </Animated.View>
   );
 };
 
 const styles = StyleSheet.create({
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 32,
-    marginTop: -80,
     position: 'relative',
+    marginBottom: 16,
   },
   snapBox: {
     backgroundColor: '#FCE762', // Bright yellow
@@ -53,7 +126,6 @@ const styles = StyleSheet.create({
     borderColor: '#000000',
     paddingHorizontal: 24,
     paddingVertical: 8,
-    transform: [{ rotate: '-3deg' }],
     shadowColor: '#000000',
     shadowOffset: { width: 6, height: 6 },
     shadowOpacity: 1,
@@ -74,8 +146,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 8,
     marginTop: -12,
-    marginLeft: 40,
-    transform: [{ rotate: '2deg' }],
+    marginLeft: 20,
     shadowColor: '#000000',
     shadowOffset: { width: 6, height: 6 },
     shadowOpacity: 1,
@@ -104,7 +175,6 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     justifyContent: 'center',
     alignItems: 'center',
-    transform: [{ rotate: '15deg' }],
     shadowColor: '#000000',
     shadowOffset: { width: 3, height: 3 },
     shadowOpacity: 1,
@@ -118,17 +188,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#FFFFFF',
   },
-  decorDot1: {
-    position: 'absolute',
-    width: 12,
-    height: 12,
-    backgroundColor: '#FFA6C9', // Pink
-    borderWidth: 2,
-    borderColor: '#000000',
-    borderRadius: 6,
-    top: 20,
-    left: -20,
-  },
+
   decorDot2: {
     position: 'absolute',
     width: 16,
@@ -148,6 +208,31 @@ const styles = StyleSheet.create({
     left: 20,
     transform: [{ rotate: '-10deg' }],
   },
+  // Form container styles
+  formContainer: {
+    width: '100%',
+    maxWidth: 340,
+    paddingHorizontal: 8,
+  },
+  tagline: {
+    fontFamily: 'Nunito_600SemiBold',
+    fontSize: 16,
+    color: '#000000',
+    textAlign: 'center',
+    marginBottom: 32,
+    opacity: 0.7,
+  },
+  buttonSpacing: {
+    marginBottom: 4,
+  },
+  orText: {
+    fontFamily: 'Nunito_600SemiBold',
+    fontSize: 14,
+    color: '#000000',
+    textAlign: 'center',
+    marginVertical: 12,
+    opacity: 0.5,
+  },
 });
 
 export default function HomeScreen() {
@@ -155,6 +240,17 @@ export default function HomeScreen() {
   const [nickname, setNickname] = useState('');
   const [permission, requestPermission] = useCameraPermissions();
   const { isConnected, error, createLobby, pendingNavigation, clearPendingNavigation } = useSocket();
+
+  // Connection indicator animation
+  const indicatorOpacity = useSharedValue(0);
+
+  useEffect(() => {
+    indicatorOpacity.value = withDelay(1000, withTiming(1, { duration: 500 }));
+  }, []);
+
+  const indicatorStyle = useAnimatedStyle(() => ({
+    opacity: indicatorOpacity.value,
+  }));
 
   // Request camera permission when component mounts
   useEffect(() => {
@@ -212,51 +308,78 @@ export default function HomeScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: Colors.neo.background }}>
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <View className="flex-1 w-full">
-          <View className="flex-1 items-center justify-center px-6">
-            {/* Neo Brutalism Logo */}
-            <SnapPlotLogo />
+          {/* Main content area with flex distribution */}
+          <View className="flex-1 justify-center items-center px-6">
+            {/* Logo section - takes upper portion */}
+            <View className="items-center mb-10">
+              <SnapPlotLogo />
+            </View>
 
-            <View className="flex-row items-center mb-5">
-              <View
-                className="h-2 w-2 rounded-full mr-1.5"
-                style={{ backgroundColor: isConnected ? '#4CAF50' : '#F44336' }}
-              />
-              <Text
-                className="text-xs text-neo-text"
-                style={{ fontFamily: 'Nunito_600SemiBold' }}
+            {/* Form section - centered with max width */}
+            <Animated.View
+              style={styles.formContainer}
+              entering={FadeInDown.delay(200).duration(500).springify()}
+            >
+              {/* Nickname Input */}
+              <View style={{ marginBottom: 24 }}>
+                <NeoInput
+                  placeholder="Enter your nickname"
+                  value={nickname}
+                  onChangeText={setNickname}
+                  autoCorrect={false}
+                  rounded="none"
+                />
+              </View>
+
+              {/* Create Game Button */}
+              <Animated.View
+                style={styles.buttonSpacing}
+                entering={FadeInDown.delay(350).duration(400)}
               >
-                {isConnected ? 'Connected' : 'Connecting...'}
-              </Text>
-            </View>
+                <NeoButton
+                  title="Create a Game"
+                  onPress={handleCreateGame}
+                  variant="primary"
+                  style={fullWidthButtonStyle}
+                />
+              </Animated.View>
 
-            <View className="w-full mb-8">
-              <NeoInput
-                placeholder="Nickname"
-                value={nickname}
-                onChangeText={setNickname}
-                autoCorrect={false}
-                rounded="none"
-              />
-            </View>
+              {/* Or separator */}
+              <Animated.Text
+                style={styles.orText}
+                entering={FadeIn.delay(450).duration(300)}
+              >
+                — or —
+              </Animated.Text>
 
-            <View className="w-full mb-5">
-              <NeoButton
-                title="Create a Game"
-                onPress={handleCreateGame}
-                variant="primary"
-                style={fullWidthButtonStyle}
-              />
-            </View>
-
-            <View className="w-full gap-4">
-              <NeoButton
-                title="Join a Game"
-                onPress={handleJoinGame}
-                variant="outline"
-                style={fullWidthButtonStyle}
-              />
-            </View>
+              {/* Join Game Button */}
+              <Animated.View entering={FadeInDown.delay(500).duration(400)}>
+                <NeoButton
+                  title="Join a Game"
+                  onPress={handleJoinGame}
+                  variant="outline"
+                  style={fullWidthButtonStyle}
+                />
+              </Animated.View>
+            </Animated.View>
           </View>
+
+          {/* Connection indicator at bottom */}
+          <Animated.View
+            className="flex-row items-center justify-center pb-6"
+            style={indicatorStyle}
+          >
+            <View
+              className="h-2 w-2 rounded-full mr-1.5"
+              style={{ backgroundColor: isConnected ? '#4CAF50' : '#F44336' }}
+            />
+            <Text
+              className="text-xs"
+              style={{ fontFamily: 'Nunito_600SemiBold', color: '#666' }}
+            >
+              {isConnected ? 'Connected to server' : 'Connecting...'}
+            </Text>
+          </Animated.View>
         </View>
       </TouchableWithoutFeedback>
     </SafeAreaView>
