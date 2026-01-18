@@ -70,26 +70,26 @@ export default function RoundResultScreen() {
       : `${SERVER_URL}/${resultData.photoPath.replace(/^\/+/, '')}`
     : null;
 
-  // Load audio on mount
-  useEffect(() => {
-    const loadSound = async () => {
-      try {
-        const { sound } = await Audio.Sound.createAsync(
-          require('@/assets/audios/drum_roll.mp3')
-        );
-        soundRef.current = sound;
-      } catch (error) {
-        console.log('Error loading sound', error);
-      }
-    };
-    loadSound();
-
-    return () => {
-      if (soundRef.current) {
-        soundRef.current.unloadAsync();
-      }
-    };
-  }, []);
+  // Load audio on mount - DISABLED
+  // useEffect(() => {
+  //   const loadSound = async () => {
+  //     try {
+  //       const { sound } = await Audio.Sound.createAsync(
+  //         require('@/assets/audios/drum_roll.mp3')
+  //       );
+  //       soundRef.current = sound;
+  //     } catch (error) {
+  //       console.log('Error loading sound', error);
+  //     }
+  //   };
+  //   loadSound();
+  //
+  //   return () => {
+  //     if (soundRef.current) {
+  //       soundRef.current.unloadAsync();
+  //     }
+  //   };
+  // }, []);
 
   useEffect(() => {
     hasRun.current = false;
@@ -117,11 +117,12 @@ export default function RoundResultScreen() {
       console.log('Running sequence...');
 
       // Step 1: Reveal Criteria Content
-      try {
-        if (soundRef.current) await soundRef.current.replayAsync();
-      } catch (e) {
-        console.log('Audio play error', e);
-      } // Play Drum Roll
+      // Drum sound disabled
+      // try {
+      //   if (soundRef.current) await soundRef.current.replayAsync();
+      // } catch (e) {
+      //   console.log('Audio play error', e);
+      // }
 
       // Wait 2s for drum roll to finish/reach peak
       safeSetTimeout(() => {
@@ -132,14 +133,14 @@ export default function RoundResultScreen() {
         safeSetTimeout(() => {
           if (!hasRun.current) return;
           // Step 2: Winner Reveal
-          const playSecond = async () => {
-            // Check if mounted
-            if (!hasRun.current) return;
-            try {
-              if (soundRef.current) await soundRef.current.replayAsync();
-            } catch (e) { }
-          };
-          playSecond();
+          // Drum sound disabled
+          // const playSecond = async () => {
+          //   if (!hasRun.current) return;
+          //   try {
+          //     if (soundRef.current) await soundRef.current.replayAsync();
+          //   } catch (e) { }
+          // };
+          // playSecond();
 
           // Wait 2s
           safeSetTimeout(() => {
@@ -170,13 +171,14 @@ export default function RoundResultScreen() {
       hasRun.current = false; // Mark as unmounted/invalid
       timeoutIds.current.forEach(clearTimeout);
       timeoutIds.current = [];
-      if (soundRef.current) {
-        try {
-          soundRef.current.stopAsync().catch(() => { });
-        } catch (e) {
-          // Sound not loaded, ignore
-        }
-      }
+      // Sound cleanup disabled
+      // if (soundRef.current) {
+      //   try {
+      //     soundRef.current.stopAsync().catch(() => { });
+      //   } catch (e) {
+      //     // Sound not loaded, ignore
+      //   }
+      // }
     };
   }, [opacityAnim, resultData, isMockMode, roundResult]); // Depend on player availability
 
