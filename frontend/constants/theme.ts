@@ -25,6 +25,17 @@ export const Colors = {
     tabIconDefault: '#9BA1A6',
     tabIconSelected: tintColorDark,
   },
+  neo: {
+    primary: '#A881EA', // Lavender
+    secondary: '#FFA6C9', // Soft Pink
+    tertiary: '#FCE762', // Soft Yellow
+    text: '#000000',
+    background: '#FFF8E7', // Beige
+    // backgroundGradient: ['#FFF5C2', '#FFC0CB', '#E0B0FF'], // Removed for now
+    border: '#000000',
+    card: '#FFFFFF',
+    shadow: '#000000',
+  }
 };
 
 export const Fonts = Platform.select({
