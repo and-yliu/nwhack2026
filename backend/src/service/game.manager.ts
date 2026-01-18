@@ -29,9 +29,14 @@ export class GameManager {
     private tickIntervals: Map<string, NodeJS.Timeout> = new Map();
     private nextRoundReady: Map<string, Set<string>> = new Map();
 
+    // Grace period for late submissions (handles network latency)
+    private static readonly SUBMISSION_GRACE_PERIOD_MS = 3000;
+
     // Callbacks for socket events
     private onTick: ((lobbyCode: string, remainingSeconds: number) => void) | undefined = undefined;
     private onRoundEnd: ((lobbyCode: string) => void) | undefined = undefined;
+    private onGracePeriodStart: ((lobbyCode: string) => void) | undefined = undefined;
+    private onAllSubmitted: ((lobbyCode: string) => void) | undefined = undefined;
 
     /**
      * Register event callbacks
@@ -39,9 +44,13 @@ export class GameManager {
     setCallbacks(callbacks: {
         onTick?: (lobbyCode: string, remainingSeconds: number) => void;
         onRoundEnd?: (lobbyCode: string) => void;
+        onGracePeriodStart?: (lobbyCode: string) => void;
+        onAllSubmitted?: (lobbyCode: string) => void;
     }) {
         this.onTick = callbacks.onTick;
         this.onRoundEnd = callbacks.onRoundEnd;
+        this.onGracePeriodStart = callbacks.onGracePeriodStart;
+        this.onAllSubmitted = callbacks.onAllSubmitted;
     }
 
     /**
@@ -187,8 +196,17 @@ export class GameManager {
                 this.onTick(lobbyCode, remaining);
             }
 
+            // When timer hits 0, wait for grace period before starting judging
+            // This allows in-flight submissions to arrive
             if (remaining <= 0) {
-                this.tryEndRound(lobbyCode);
+                this.clearTimers(lobbyCode);
+                // Notify immediately that grace period started (show "Judging..." UI)
+                if (this.onGracePeriodStart) {
+                    this.onGracePeriodStart(lobbyCode);
+                }
+                setTimeout(() => {
+                    this.tryEndRound(lobbyCode);
+                }, GameManager.SUBMISSION_GRACE_PERIOD_MS);
             }
         }, 1000);
 
@@ -226,8 +244,8 @@ export class GameManager {
             return false;
         }
 
-        // Check if deadline passed
-        if (Date.now() > game.roundDeadline) {
+        // Check if deadline passed (with grace period for network latency)
+        if (Date.now() > game.roundDeadline + GameManager.SUBMISSION_GRACE_PERIOD_MS) {
             return false;
         }
 
@@ -236,6 +254,10 @@ export class GameManager {
 
         // Check if all players have submitted
         if (this.allPlayersSubmitted(lobbyCode)) {
+            // Emit judging indicator immediately (same as grace period start)
+            if (this.onAllSubmitted) {
+                this.onAllSubmitted(lobbyCode);
+            }
             this.tryEndRound(lobbyCode);
         }
 
