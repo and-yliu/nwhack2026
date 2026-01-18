@@ -123,6 +123,12 @@ export default function HomeScreen() {
                 variant="outline"
                 style={fullWidthButtonStyle}
               />
+              <NeoButton
+                title="📖 Test Story"
+                onPress={() => router.push('/story-result')}
+                variant="secondary"
+                style={fullWidthButtonStyle}
+              />
             </View>
           </View>
         </KeyboardAvoidingView>
