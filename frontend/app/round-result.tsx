@@ -146,30 +146,56 @@ export default function RoundResultScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-neo-background pt-16" edges={['left', 'right', 'bottom']}>
-      <View className="flex-1 w-full px-6 py-5">
+    <SafeAreaView className="flex-1 bg-neo-background" edges={['top', 'left', 'right', 'bottom']}>
+      <View className="flex-1 w-full px-6 py-4">
 
-        {/* Header Section */}
-        <View className="w-full items-start mb-6">
+        {/* Round Header */}
+        <View className="w-full items-center mb-4">
           <Text
-            className="text-[28px] text-neo-text text-left"
-            style={{ fontFamily: 'Nunito_700Bold' }}
+            className="text-base text-neo-text/60"
+            style={{ fontFamily: 'Nunito_600SemiBold' }}
           >
-            Criteria: {step >= 1 ? criteria : ''}
+            ROUND {roundResult?.round ?? 1} WINNER
           </Text>
         </View>
 
-        {/* Winner Section */}
-        {step >= 2 && (
-          <View className="w-full items-start mb-2.5">
+        {/* Theme & Criteria Section */}
+        <View className="w-full mb-4">
+          <View className="mb-2">
             <Text
-              className="text-lg text-neo-text mb-1.5"
-              style={{ fontFamily: 'Nunito_700Bold', lineHeight: 24 }}
+              className="text-sm text-neo-text/50 uppercase tracking-wider"
+              style={{ fontFamily: 'Nunito_700Bold' }}
             >
-              {winnerText}
+              Theme
             </Text>
-            {/* Image Placeholder */}
-            <View className="w-full aspect-square bg-white border-2 border-neo-border mb-1.5 overflow-hidden">
+            <Text
+              className="text-xl text-neo-text"
+              style={{ fontFamily: 'Nunito_700Bold' }}
+            >
+              {step >= 1 ? theme : '...'}
+            </Text>
+          </View>
+          <View>
+            <Text
+              className="text-sm text-neo-text/50 uppercase tracking-wider"
+              style={{ fontFamily: 'Nunito_700Bold' }}
+            >
+              Criteria
+            </Text>
+            <Text
+              className="text-xl text-neo-text"
+              style={{ fontFamily: 'Nunito_700Bold' }}
+            >
+              {step >= 1 ? criteria : '...'}
+            </Text>
+          </View>
+        </View>
+
+        {/* Winner Section with Comment */}
+        {step >= 2 && (
+          <View className="w-full relative">
+            {/* Winner Photo */}
+            <View className="w-full rounded-2xl aspect-square bg-white border-2 border-neo-border overflow-hidden">
               {winnerPhotoUrl ? (
                 <Image
                   source={{ uri: winnerPhotoUrl }}
@@ -178,59 +204,69 @@ export default function RoundResultScreen() {
                 />
               ) : null}
             </View>
+
+            {/* Winner Name Tag - overlaid on top right */}
+            <View className="absolute top-3 right-3 bg-black px-4 py-1.5 rounded-full">
+              <Text
+                className="text-base text-white"
+                style={{ fontFamily: 'Nunito_700Bold' }}
+              >
+                {winnerName}
+              </Text>
+            </View>
           </View>
         )}
 
-        {/* Judge's Comment */}
-        <Animated.View style={{ opacity: opacityAnim, width: '100%', marginBottom: 10 }}>
+        {/* Judge's Comment - grouped with image */}
+        <Animated.View style={{ opacity: opacityAnim, width: '100%', marginTop: 16 }}>
           {step >= 3 && (
-            <NeoView className="w-full bg-[#FFF5EB] p-4">
+            <NeoView className="w-full bg-[#FFF5EB] p-4 mt-3">
               <Text
-                className="text-lg text-[#C89B7B]"
-                style={{ fontFamily: 'Nunito_600SemiBold', lineHeight: 24 }}
+                className="text-xl text-[#4caf50]"
+                style={{ fontFamily: 'Nunito_600SemiBold', lineHeight: 26 }}
               >
-                {comment}
+                "{comment}"
               </Text>
             </NeoView>
           )}
         </Animated.View>
 
-        {/* Reactions & Footer */}
-        {step >= 4 && (
-          <View className="w-full items-center gap-2.5 mt-auto">
-            {/* Remote reactions from other players */}
-            <View className="absolute -top-12 left-0 right-0 items-center pointer-events-none">
-              {remoteReactions.map((reaction) => (
-                <FlyingEmoji
-                  key={reaction.id}
-                  icon={reaction.icon}
-                  color="#E8C547"
-                  onComplete={() => consumeReaction(reaction.id)}
-                />
-              ))}
-            </View>
-
-            <View className="flex-row justify-between w-full mb-1.5 z-10">
-              <NeoReactionButton icon="thumbs-up" color="#E8C547" onSend={sendReaction} />
-              <NeoReactionButton icon="thumbs-down" color="#E8C547" onSend={sendReaction} />
-              <NeoReactionButton icon="egg" color="#E8C547" onSend={sendReaction} />
-              <NeoReactionButton icon="rose" color="#FF6B6B" onSend={sendReaction} />
-            </View>
-
-            <NeoButton
-              title={
-                hasConfirmed
-                  ? 'READY ✓'
-                  : `READY (${nextRoundStatus?.readyCount ?? 0}/${nextRoundStatus?.totalPlayers ?? 0})`
-              }
-              onPress={handleReadyNextRound}
-              variant="primary"
-              className="w-full"
-            />
-          </View>
-        )}
-
       </View>
+
+      {/* Fixed Footer - Reactions & Ready Button */}
+      {step >= 4 && (
+        <View className="absolute bottom-0 left-0 right-0 px-6 mb-10 pt-3 bg-neo-background gap-6">
+          {/* Remote reactions from other players */}
+          <View className="absolute -top-12 left-0 right-0 items-center pointer-events-none">
+            {remoteReactions.map((reaction) => (
+              <FlyingEmoji
+                key={reaction.id}
+                icon={reaction.icon}
+                color="#E8C547"
+                onComplete={() => consumeReaction(reaction.id)}
+              />
+            ))}
+          </View>
+
+          <View className="flex-row justify-between w-full mb-2.5 z-10">
+            <NeoReactionButton icon="thumbs-up" color="#E8C547" onSend={sendReaction} />
+            <NeoReactionButton icon="thumbs-down" color="#E8C547" onSend={sendReaction} />
+            <NeoReactionButton icon="egg" color="#E8C547" onSend={sendReaction} />
+            <NeoReactionButton icon="rose" color="#FF6B6B" onSend={sendReaction} />
+          </View>
+
+          <NeoButton
+            title={
+              hasConfirmed
+                ? 'READY ✓'
+                : `READY (${nextRoundStatus?.readyCount ?? 0}/${nextRoundStatus?.totalPlayers ?? 0})`
+            }
+            onPress={handleReadyNextRound}
+            variant="primary"
+            className="w-full"
+          />
+        </View>
+      )}
     </SafeAreaView>
   );
 }

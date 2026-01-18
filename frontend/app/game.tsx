@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
-import { Alert, StyleSheet, Text, View, TouchableOpacity, Image, Animated, Easing } from 'react-native';
+import { Alert, StyleSheet, Text, View, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
@@ -8,86 +8,15 @@ import { NeoButton } from '@/components/ui/NeoButton';
 import { useSocket } from '@/hooks/useSocket';
 import '../global.css';
 
-// Animated Judging Indicator Component
+// Simple Judging Indicator Component
 function JudgingIndicator() {
-    const pulseAnim = useRef(new Animated.Value(1)).current;
-    const rotateAnim = useRef(new Animated.Value(0)).current;
-
-    useEffect(() => {
-        // Pulsing animation
-        const pulse = Animated.loop(
-            Animated.sequence([
-                Animated.timing(pulseAnim, {
-                    toValue: 1.1,
-                    duration: 600,
-                    easing: Easing.inOut(Easing.ease),
-                    useNativeDriver: true,
-                }),
-                Animated.timing(pulseAnim, {
-                    toValue: 1,
-                    duration: 600,
-                    easing: Easing.inOut(Easing.ease),
-                    useNativeDriver: true,
-                }),
-            ])
-        );
-
-        // Gentle rotation animation for the icon
-        const rotate = Animated.loop(
-            Animated.sequence([
-                Animated.timing(rotateAnim, {
-                    toValue: 1,
-                    duration: 400,
-                    easing: Easing.inOut(Easing.ease),
-                    useNativeDriver: true,
-                }),
-                Animated.timing(rotateAnim, {
-                    toValue: -1,
-                    duration: 400,
-                    easing: Easing.inOut(Easing.ease),
-                    useNativeDriver: true,
-                }),
-                Animated.timing(rotateAnim, {
-                    toValue: 0,
-                    duration: 400,
-                    easing: Easing.inOut(Easing.ease),
-                    useNativeDriver: true,
-                }),
-            ])
-        );
-
-        pulse.start();
-        rotate.start();
-
-        return () => {
-            pulse.stop();
-            rotate.stop();
-        };
-    }, [pulseAnim, rotateAnim]);
-
-    const rotateInterpolate = rotateAnim.interpolate({
-        inputRange: [-1, 1],
-        outputRange: ['-15deg', '15deg'],
-    });
-
     return (
-        <Animated.View
-            className="items-center justify-center py-3 px-6 rounded-2xl bg-neo-primary"
-            style={[
-                {
-                    transform: [{ scale: pulseAnim }],
-                    shadowColor: '#A881EA',
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.4,
-                    shadowRadius: 8,
-                    elevation: 8,
-                },
-            ]}
-        >
-            <Text className="text-lg font-bold text-white tracking-wider">JUDGING</Text>
-        </Animated.View>
+        <View className="w-full py-2 rounded-lg bg-neo-primary items-center justify-center">
+            <Text className="text-base font-bold text-white">JUDGING...</Text>
+        </View>
     );
 }
+
 
 export default function GameScreen() {
     const router = useRouter();

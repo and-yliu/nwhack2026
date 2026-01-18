@@ -163,7 +163,7 @@ export default function HostWaitingRoomScreen() {
                 <NeoButton
                     title={isHost && !isHostReady ? 'READY' : 'START GAME'}
                     onPress={isHost && !isHostReady ? () => setReady(true) : handleStartGame}
-                    variant="primary"
+                    variant={isHost && !isHostReady ? 'outline' : 'primary'}
                 />
             </View>
         </SafeAreaView>
